@@ -59,7 +59,7 @@ Tamaños: **S** ≈ medio día · **M** ≈ 1 día · **L** ≈ 2 días.
 - [ ] `db` usa PostgreSQL 16 con un volumen con nombre; los datos sobreviven a `docker compose down` + `up`.
 - [ ] `api` expone `GET http://localhost:3000/salud`, que responde `200 {"estado":"ok","bd":"operativa"}`, y `"bd":"caida"` con `503` si la BD no responde.
 - [ ] `web` responde en `http://localhost:5173` y muestra una página que consulta `/salud` y despliega el estado.
-- [ ] `adminer` responde en `http://localhost:8080` y conecta a la BD con las credenciales de `.env`.
+- [ ] `adminer` responde en `http://localhost:8088` y conecta a la BD con las credenciales de `.env`.
 - [ ] Al editar un archivo `.ts` o `.tsx`, la API o la web se recargan sin reiniciar contenedores.
 - [ ] `api` espera a que `db` esté sana (`depends_on` + `healthcheck`) antes de arrancar.
 

@@ -13,10 +13,35 @@ packages/
 docs/     Plan del sprint y documentación técnica
 ```
 
-## Requisitos
+## Levantar con Docker
 
-- Node.js 22 (ver `.nvmrc`)
-- pnpm 10 (`npm install -g pnpm@10`)
+Requisito: Docker Desktop.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+| Servicio | URL                         | Descripción                                |
+| -------- | --------------------------- | ------------------------------------------ |
+| web      | http://localhost:5173       | Frontend con recarga en caliente           |
+| api      | http://localhost:3000/salud | Estado de la API y de la base de datos     |
+| adminer  | http://localhost:8088       | Cliente web de PostgreSQL (servidor `db`)  |
+| db       | `localhost:5432`            | PostgreSQL 16 (usuario/clave/BD en `.env`) |
+
+Los datos de PostgreSQL viven en el volumen `cuidarteplus_pgdata` y sobreviven a `docker compose down`. Para borrarlos: `docker compose down -v`.
+
+Al editar archivos en `apps/` o `packages/`, la API y la web se recargan solas (por sondeo de archivos, compatible con Windows).
+
+Si cambian las dependencias (`pnpm-lock.yaml`), reconstruir renovando los volúmenes de `node_modules`:
+
+```bash
+docker compose up --build -V
+```
+
+## Desarrollo sin Docker
+
+Requisitos: Node.js 22 (ver `.nvmrc`) y pnpm 10 (`npm install -g pnpm@10`).
 
 ## Comandos
 
@@ -29,9 +54,7 @@ docs/     Plan del sprint y documentación técnica
 | `pnpm test`      | Ejecuta los tests (Vitest) de todos los paquetes |
 | `pnpm typecheck` | Verifica tipos sin compilar                      |
 
-Desarrollo por paquete: `pnpm --filter @cuidarte/api dev`, `pnpm --filter @cuidarte/web dev`.
-
-La ejecución con Docker Compose se agrega en el issue #2.
+Desarrollo por paquete: `pnpm --filter @cuidarte/api dev` (requiere `DATABASE_URL`), `pnpm --filter @cuidarte/web dev`.
 
 ## Planificación
 

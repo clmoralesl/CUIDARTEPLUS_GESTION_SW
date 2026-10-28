@@ -1,0 +1,6 @@
+{
+  "watch": ["dist", "../../packages/core/dist"],
+  "ext": "js,cjs",
+  "delay": 1000,
+  "legacyWatch": true
+}
