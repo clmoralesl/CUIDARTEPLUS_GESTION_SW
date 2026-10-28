@@ -12,7 +12,12 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "db:migrate": "docker compose exec api pnpm --filter @cuidarte/api db:migrate",
+    "db:deploy": "docker compose exec api pnpm --filter @cuidarte/api db:deploy",
+    "db:reset": "docker compose exec api pnpm --filter @cuidarte/api db:reset",
+    "db:seed": "docker compose exec api pnpm --filter @cuidarte/api db:seed",
+    "db:erd": "pnpm --filter @cuidarte/api db:erd && prettier --write docs/modelo-datos.md"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

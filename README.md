@@ -39,6 +39,20 @@ Si cambian las dependencias (`pnpm-lock.yaml`), reconstruir renovando los volúm
 docker compose up --build -V
 ```
 
+## Base de datos
+
+El esquema vive en `apps/api/prisma/schema.prisma` y está documentado en [docs/modelo-datos.md](docs/modelo-datos.md). Al arrancar, la API aplica sola las migraciones pendientes.
+
+Con el stack levantado, desde la raíz:
+
+| Comando           | Qué hace                                                             |
+| ----------------- | -------------------------------------------------------------------- |
+| `pnpm db:migrate` | Crea y aplica una migración nueva tras editar el schema              |
+| `pnpm db:deploy`  | Aplica las migraciones pendientes                                    |
+| `pnpm db:reset`   | Borra la BD, aplica todas las migraciones y ejecuta el seed          |
+| `pnpm db:seed`    | Ejecuta solo el seed                                                 |
+| `pnpm db:erd`     | Regenera el diagrama y las tablas de `docs/modelo-datos.md` (sin BD) |
+
 ## Desarrollo sin Docker
 
 Requisitos: Node.js 22 (ver `.nvmrc`) y pnpm 10 (`npm install -g pnpm@10`).

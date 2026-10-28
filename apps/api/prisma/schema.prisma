@@ -1,0 +1,534 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EstadoProyecto {
+  PLANIFICADO
+  EN_CURSO
+  CERRADO
+}
+
+enum NivelTarea {
+  ETAPA
+  ACTIVIDAD
+  SUBACTIVIDAD
+}
+
+enum TipoDependencia {
+  FS
+  SS
+  FF
+  SF
+}
+
+enum RolUsuario {
+  JEFE_PROYECTO
+  COMITE_CAMBIOS
+}
+
+enum AmbitoKpi {
+  PROYECTO
+  HITO
+  CAMBIO
+}
+
+enum UnidadKpi {
+  PORCENTAJE
+  INDICE
+  DIAS
+  CLP
+  NUMERO
+}
+
+enum DireccionKpi {
+  MAYOR_MEJOR
+  MENOR_MEJOR
+}
+
+enum Semaforo {
+  VERDE
+  AMARILLO
+  ROJO
+}
+
+enum TipoAlerta {
+  SOBREASIGNACION
+  KPI
+  PRESUPUESTO
+  HITO
+  ETAPA_VENCIDA
+}
+
+enum SeveridadAlerta {
+  INFO
+  ADVERTENCIA
+  CRITICA
+}
+
+enum Prioridad {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum CategoriaCambio {
+  ALCANCE
+  PLAZO
+  COSTO
+  RECURSO
+  CALIDAD
+}
+
+enum EstadoSolicitud {
+  REGISTRADA
+  EN_EVALUACION
+  APROBADA
+  RECHAZADA
+  IMPLEMENTADA
+  CERRADA
+}
+
+enum EstadoEtapa {
+  PENDIENTE
+  EN_CURSO
+  COMPLETADA
+  OMITIDA
+}
+
+enum EstadoAccion {
+  PENDIENTE
+  EN_CURSO
+  CERRADA
+}
+
+enum TipoImpacto {
+  DURACION
+  ASIGNACION
+  NUEVA_TAREA
+  PRESUPUESTO
+}
+
+enum AccionBitacora {
+  CREAR
+  ACTUALIZAR
+  ELIMINAR
+  RECALCULAR
+  APROBAR
+  RECHAZAR
+  IMPORTAR
+  CERRAR
+}
+
+model Proyecto {
+  id            Int            @id @default(autoincrement())
+  nombre        String         @db.VarChar(120)
+  descripcion   String?
+  responsable   String         @db.VarChar(120)
+  presupuesto   Decimal        @default(0) @db.Decimal(14, 2)
+  fechaInicio   DateTime       @map("fecha_inicio") @db.Date
+  fechaFin      DateTime?      @map("fecha_fin") @db.Date
+  estado        EstadoProyecto @default(PLANIFICADO)
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+
+  calendario   Calendario?
+  tareas       Tarea[]
+  dependencias Dependencia[]
+  hitos        Hito[]
+  lineasBase   LineaBase[]
+  mediciones   KpiMedicion[]
+  alertas      Alerta[]
+  solicitudes  SolicitudCambio[]
+  bitacora     Bitacora[]
+
+  @@map("proyectos")
+}
+
+model Calendario {
+  id             Int       @id @default(autoincrement())
+  proyectoId     Int       @unique @map("proyecto_id")
+  diasLaborables Int[]     @default([1, 2, 3, 4, 5]) @map("dias_laborables")
+  horasPorDia    Decimal   @default(8) @map("horas_por_dia") @db.Decimal(4, 2)
+  proyecto       Proyecto  @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  feriados       Feriado[]
+
+  @@map("calendarios")
+}
+
+model Feriado {
+  id           Int        @id @default(autoincrement())
+  calendarioId Int        @map("calendario_id")
+  fecha        DateTime   @db.Date
+  descripcion  String     @db.VarChar(120)
+  calendario   Calendario @relation(fields: [calendarioId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarioId, fecha])
+  @@map("feriados")
+}
+
+model Tarea {
+  id               Int        @id @default(autoincrement())
+  proyectoId       Int        @map("proyecto_id")
+  padreId          Int?       @map("padre_id")
+  nivel            NivelTarea
+  codigo           String     @db.VarChar(30)
+  orden            Int
+  nombre           String     @db.VarChar(200)
+  descripcion      String?
+  responsable      String?    @db.VarChar(120)
+  duracionDias     Int        @default(1) @map("duracion_dias")
+  inicioPlan       DateTime?  @map("inicio_plan") @db.Date
+  finPlan          DateTime?  @map("fin_plan") @db.Date
+  inicioReal       DateTime?  @map("inicio_real") @db.Date
+  finReal          DateTime?  @map("fin_real") @db.Date
+  fechaFija        DateTime?  @map("fecha_fija") @db.Date
+  porcentajeAvance Decimal    @default(0) @map("porcentaje_avance") @db.Decimal(5, 2)
+  inicioTardio     DateTime?  @map("inicio_tardio") @db.Date
+  finTardio        DateTime?  @map("fin_tardio") @db.Date
+  holguraDias      Int?       @map("holgura_dias")
+  esCritica        Boolean    @default(false) @map("es_critica")
+  costoPlan        Decimal    @default(0) @map("costo_plan") @db.Decimal(14, 2)
+  costoReal        Decimal    @default(0) @map("costo_real") @db.Decimal(14, 2)
+  creadoEn         DateTime   @default(now()) @map("creado_en")
+  actualizadoEn    DateTime   @updatedAt @map("actualizado_en")
+
+  proyecto        Proyecto         @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  padre           Tarea?           @relation("JerarquiaTareas", fields: [padreId], references: [id], onDelete: Cascade)
+  hijas           Tarea[]          @relation("JerarquiaTareas")
+  predecesoras    Dependencia[]    @relation("Sucesora")
+  sucesoras       Dependencia[]    @relation("Predecesora")
+  asignaciones    Asignacion[]
+  registrosAvance RegistroAvance[]
+  hitos           Hito[]
+  lineasBase      LineaBaseTarea[]
+  impactos        ImpactoCambio[]
+
+  @@unique([proyectoId, codigo])
+  @@index([padreId])
+  @@map("tareas")
+}
+
+model Dependencia {
+  id            Int             @id @default(autoincrement())
+  proyectoId    Int             @map("proyecto_id")
+  predecesoraId Int             @map("predecesora_id")
+  sucesoraId    Int             @map("sucesora_id")
+  tipo          TipoDependencia @default(FS)
+  desfaseDias   Int             @default(0) @map("desfase_dias")
+  proyecto      Proyecto        @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  predecesora   Tarea           @relation("Predecesora", fields: [predecesoraId], references: [id], onDelete: Cascade)
+  sucesora      Tarea           @relation("Sucesora", fields: [sucesoraId], references: [id], onDelete: Cascade)
+
+  @@unique([predecesoraId, sucesoraId])
+  @@index([sucesoraId])
+  @@map("dependencias")
+}
+
+model Profesional {
+  id           Int          @id @default(autoincrement())
+  nombre       String       @unique @db.VarChar(120)
+  cargo        String       @db.VarChar(120)
+  tarifaHora   Decimal      @map("tarifa_hora") @db.Decimal(12, 2)
+  horasDiarias Decimal      @default(8) @map("horas_diarias") @db.Decimal(4, 2)
+  activo       Boolean      @default(true)
+  asignaciones Asignacion[]
+
+  @@map("profesionales")
+}
+
+model TipoRecurso {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(60)
+  descripcion String?
+  recursos    Recurso[]
+
+  @@map("tipos_recurso")
+}
+
+model Recurso {
+  id            Int          @id @default(autoincrement())
+  nombre        String       @unique @db.VarChar(120)
+  tipoRecursoId Int          @map("tipo_recurso_id")
+  unidad        String       @db.VarChar(30)
+  costoUnitario Decimal      @map("costo_unitario") @db.Decimal(12, 2)
+  activo        Boolean      @default(true)
+  tipoRecurso   TipoRecurso  @relation(fields: [tipoRecursoId], references: [id], onDelete: Restrict)
+  asignaciones  Asignacion[]
+
+  @@map("recursos")
+}
+
+model Asignacion {
+  id              Int          @id @default(autoincrement())
+  tareaId         Int          @map("tarea_id")
+  profesionalId   Int?         @map("profesional_id")
+  recursoId       Int?         @map("recurso_id")
+  dedicacion      Decimal?     @db.Decimal(5, 2)
+  horasPlan       Decimal?     @map("horas_plan") @db.Decimal(10, 2)
+  horasPlanManual Boolean      @default(false) @map("horas_plan_manual")
+  horasReales     Decimal?     @map("horas_reales") @db.Decimal(10, 2)
+  cantidadPlan    Decimal?     @map("cantidad_plan") @db.Decimal(12, 2)
+  cantidadReal    Decimal?     @map("cantidad_real") @db.Decimal(12, 2)
+  tarea           Tarea        @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  profesional     Profesional? @relation(fields: [profesionalId], references: [id], onDelete: Restrict)
+  recurso         Recurso?     @relation(fields: [recursoId], references: [id], onDelete: Restrict)
+
+  @@unique([tareaId, profesionalId])
+  @@unique([tareaId, recursoId])
+  @@index([profesionalId])
+  @@index([recursoId])
+  @@map("asignaciones")
+}
+
+model RegistroAvance {
+  id         Int        @id @default(autoincrement())
+  tareaId    Int        @map("tarea_id")
+  fecha      DateTime   @db.Date
+  porcentaje Decimal    @db.Decimal(5, 2)
+  comentario String?
+  rol        RolUsuario
+  creadoEn   DateTime   @default(now()) @map("creado_en")
+  tarea      Tarea      @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  @@index([tareaId, fecha])
+  @@map("registros_avance")
+}
+
+model Hito {
+  id                Int           @id @default(autoincrement())
+  proyectoId        Int           @map("proyecto_id")
+  tareaId           Int?          @map("tarea_id")
+  nombre            String        @db.VarChar(160)
+  criterio          String?
+  responsable       String?       @db.VarChar(120)
+  fechaObjetivo     DateTime      @map("fecha_objetivo") @db.Date
+  fechaCumplimiento DateTime?     @map("fecha_cumplimiento") @db.Date
+  proyecto          Proyecto      @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  tarea             Tarea?        @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+  mediciones        KpiMedicion[]
+
+  @@index([proyectoId])
+  @@map("hitos")
+}
+
+model LineaBase {
+  id                Int              @id @default(autoincrement())
+  proyectoId        Int              @map("proyecto_id")
+  version           Int
+  descripcion       String?
+  solicitudCambioId Int?             @map("solicitud_cambio_id")
+  fechaFinProyecto  DateTime?        @map("fecha_fin_proyecto") @db.Date
+  costoPlanTotal    Decimal          @default(0) @map("costo_plan_total") @db.Decimal(14, 2)
+  creadoEn          DateTime         @default(now()) @map("creado_en")
+  proyecto          Proyecto         @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  solicitudCambio   SolicitudCambio? @relation(fields: [solicitudCambioId], references: [id], onDelete: SetNull)
+  tareas            LineaBaseTarea[]
+
+  @@unique([proyectoId, version])
+  @@map("lineas_base")
+}
+
+model LineaBaseTarea {
+  id           Int        @id @default(autoincrement())
+  lineaBaseId  Int        @map("linea_base_id")
+  tareaId      Int?       @map("tarea_id")
+  codigo       String     @db.VarChar(30)
+  nombre       String     @db.VarChar(200)
+  nivel        NivelTarea
+  duracionDias Int        @map("duracion_dias")
+  inicioPlan   DateTime?  @map("inicio_plan") @db.Date
+  finPlan      DateTime?  @map("fin_plan") @db.Date
+  costoPlan    Decimal    @default(0) @map("costo_plan") @db.Decimal(14, 2)
+  lineaBase    LineaBase  @relation(fields: [lineaBaseId], references: [id], onDelete: Cascade)
+  tarea        Tarea?     @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+
+  @@unique([lineaBaseId, codigo])
+  @@map("lineas_base_tareas")
+}
+
+model KpiDefinicion {
+  id          Int           @id @default(autoincrement())
+  codigo      String        @unique @db.VarChar(40)
+  nombre      String        @db.VarChar(120)
+  descripcion String?
+  ambito      AmbitoKpi
+  formula     String
+  unidad      UnidadKpi
+  meta        Decimal?      @db.Decimal(14, 4)
+  direccion   DireccionKpi
+  esAdicional Boolean       @default(false) @map("es_adicional")
+  activo      Boolean       @default(true)
+  umbrales    KpiUmbral[]
+  mediciones  KpiMedicion[]
+
+  @@map("kpi_definiciones")
+}
+
+model KpiUmbral {
+  id         Int           @id @default(autoincrement())
+  kpiId      Int           @map("kpi_id")
+  semaforo   Semaforo
+  valorDesde Decimal       @map("valor_desde") @db.Decimal(14, 4)
+  kpi        KpiDefinicion @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([kpiId, semaforo])
+  @@map("kpi_umbrales")
+}
+
+model KpiMedicion {
+  id         Int           @id @default(autoincrement())
+  kpiId      Int           @map("kpi_id")
+  proyectoId Int           @map("proyecto_id")
+  hitoId     Int?          @map("hito_id")
+  valor      Decimal?      @db.Decimal(18, 4)
+  semaforo   Semaforo?
+  origen     String?       @db.VarChar(200)
+  medidoEn   DateTime      @default(now()) @map("medido_en")
+  kpi        KpiDefinicion @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  proyecto   Proyecto      @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  hito       Hito?         @relation(fields: [hitoId], references: [id], onDelete: SetNull)
+
+  @@index([kpiId, proyectoId, medidoEn])
+  @@map("kpi_mediciones")
+}
+
+model Alerta {
+  id         Int             @id @default(autoincrement())
+  proyectoId Int             @map("proyecto_id")
+  tipo       TipoAlerta
+  severidad  SeveridadAlerta @default(ADVERTENCIA)
+  clave      String          @db.VarChar(160)
+  mensaje    String
+  detalle    Json?
+  entidad    String?         @db.VarChar(60)
+  entidadId  Int?            @map("entidad_id")
+  activa     Boolean         @default(true)
+  creadaEn   DateTime        @default(now()) @map("creada_en")
+  cerradaEn  DateTime?       @map("cerrada_en")
+  proyecto   Proyecto        @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId, activa])
+  @@index([proyectoId, clave])
+  @@map("alertas")
+}
+
+model SolicitudCambio {
+  id                 Int             @id @default(autoincrement())
+  proyectoId         Int             @map("proyecto_id")
+  codigo             String          @db.VarChar(20)
+  titulo             String          @db.VarChar(200)
+  descripcion        String
+  justificacion      String
+  solicitante        String          @db.VarChar(120)
+  responsable        String          @db.VarChar(120)
+  prioridad          Prioridad       @default(MEDIA)
+  categoria          CategoriaCambio
+  probabilidadRiesgo Int             @map("probabilidad_riesgo")
+  impactoRiesgo      Int             @map("impacto_riesgo")
+  estado             EstadoSolicitud @default(REGISTRADA)
+  etapaActual        Int             @default(1) @map("etapa_actual")
+  motivoRechazo      String?         @map("motivo_rechazo")
+  fechaRegistro      DateTime        @default(now()) @map("fecha_registro")
+  fechaDecision      DateTime?       @map("fecha_decision")
+  fechaCierre        DateTime?       @map("fecha_cierre")
+  actualizadoEn      DateTime        @updatedAt @map("actualizado_en")
+  proyecto           Proyecto        @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  etapas             EtapaCambio[]
+  impactos           ImpactoCambio[]
+  lineasBase         LineaBase[]
+  bitacora           Bitacora[]
+
+  @@unique([proyectoId, codigo])
+  @@index([proyectoId, estado])
+  @@map("solicitudes_cambio")
+}
+
+model EtapaCambio {
+  id                 Int                @id @default(autoincrement())
+  solicitudId        Int                @map("solicitud_id")
+  numero             Int
+  nombre             String             @db.VarChar(120)
+  responsable        String?            @db.VarChar(120)
+  estado             EstadoEtapa        @default(PENDIENTE)
+  fechaInicio        DateTime?          @map("fecha_inicio") @db.Date
+  fechaFin           DateTime?          @map("fecha_fin") @db.Date
+  fechaCompletada    DateTime?          @map("fecha_completada")
+  comentario         String?
+  porcentajeAdopcion Decimal?           @map("porcentaje_adopcion") @db.Decimal(5, 2)
+  solicitud          SolicitudCambio    @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  evidencias         Evidencia[]
+  acciones           AccionCorrectiva[]
+
+  @@unique([solicitudId, numero])
+  @@map("etapas_cambio")
+}
+
+model AccionCorrectiva {
+  id              Int          @id @default(autoincrement())
+  etapaId         Int          @map("etapa_id")
+  descripcion     String
+  responsable     String       @db.VarChar(120)
+  fechaCompromiso DateTime     @map("fecha_compromiso") @db.Date
+  fechaCierre     DateTime?    @map("fecha_cierre") @db.Date
+  estado          EstadoAccion @default(PENDIENTE)
+  etapa           EtapaCambio  @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+
+  @@map("acciones_correctivas")
+}
+
+model Evidencia {
+  id            Int         @id @default(autoincrement())
+  etapaId       Int         @map("etapa_id")
+  nombreArchivo String      @map("nombre_archivo") @db.VarChar(255)
+  rutaArchivo   String      @map("ruta_archivo") @db.VarChar(500)
+  tipoMime      String      @map("tipo_mime") @db.VarChar(120)
+  tamanoBytes   Int         @map("tamano_bytes")
+  subidoPor     RolUsuario  @map("subido_por")
+  subidoEn      DateTime    @default(now()) @map("subido_en")
+  etapa         EtapaCambio @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+
+  @@map("evidencias")
+}
+
+model ImpactoCambio {
+  id          Int             @id @default(autoincrement())
+  solicitudId Int             @map("solicitud_id")
+  tipo        TipoImpacto
+  tareaId     Int?            @map("tarea_id")
+  datos       Json
+  descripcion String?
+  aplicado    Boolean         @default(false)
+  solicitud   SolicitudCambio @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  tarea       Tarea?          @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+
+  @@index([solicitudId])
+  @@map("impactos_cambio")
+}
+
+model Bitacora {
+  id                Int              @id @default(autoincrement())
+  proyectoId        Int?             @map("proyecto_id")
+  fecha             DateTime         @default(now())
+  rol               RolUsuario?
+  entidad           String           @db.VarChar(60)
+  entidadId         Int?             @map("entidad_id")
+  accion            AccionBitacora
+  campo             String?          @db.VarChar(60)
+  valorAnterior     Json?            @map("valor_anterior")
+  valorNuevo        Json?            @map("valor_nuevo")
+  origen            String?          @db.VarChar(200)
+  solicitudCambioId Int?             @map("solicitud_cambio_id")
+  proyecto          Proyecto?        @relation(fields: [proyectoId], references: [id], onDelete: SetNull)
+  solicitudCambio   SolicitudCambio? @relation(fields: [solicitudCambioId], references: [id], onDelete: SetNull)
+
+  @@index([proyectoId, fecha])
+  @@index([entidad, entidadId])
+  @@map("bitacora")
+}
