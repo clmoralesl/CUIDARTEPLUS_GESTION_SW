@@ -4,7 +4,10 @@ ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     CI=true
 
-RUN npm install -g pnpm@10.34.9
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm@10.34.9
 
 WORKDIR /app
 
