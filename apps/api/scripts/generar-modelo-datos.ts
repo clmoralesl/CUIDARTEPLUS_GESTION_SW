@@ -28,36 +28,47 @@ function esUnico(modelo: Modelo, campo: Campo): boolean {
   return campo.isUnique || modelo.uniqueFields.some((u) => u.length === 1 && u[0] === campo.name);
 }
 
+function esRelacionPropia(campo: Campo): boolean {
+  return campo.kind === 'object' && (campo.relationFromFields?.length ?? 0) > 0;
+}
+
+function relacionMermaid(modelo: Modelo, campo: Campo): string {
+  const destino = modelos.find((m) => m.name === campo.type);
+  const inverso = destino?.fields.find((f) => f.relationName === campo.relationName && f !== campo);
+  const ladoPadre = campo.isRequired ? '||' : '|o';
+  const ladoHijo = inverso?.isList ? 'o{' : 'o|';
+  const etiqueta = (campo.relationFromFields ?? []).join(', ');
+  return `  ${campo.type} ${ladoPadre}--${ladoHijo} ${modelo.name} : "${etiqueta}"`;
+}
+
+function clavesMermaid(modelo: Modelo, campo: Campo): string[] {
+  const claves: string[] = [];
+  if (campo.isId) claves.push('PK');
+  if (esClaveForanea(modelo, campo)) claves.push('FK');
+  if (esUnico(modelo, campo)) claves.push('UK');
+  return claves;
+}
+
+function atributoMermaid(modelo: Modelo, campo: Campo): string {
+  const tipo = campo.isList ? campo.type + '_lista' : campo.type;
+  const claves = clavesMermaid(modelo, campo);
+  const sufijo = claves.length > 0 ? ' ' + claves.join(', ') : '';
+  return `    ${tipo} ${campo.name}${sufijo}`;
+}
+
+function entidadMermaid(modelo: Modelo): string[] {
+  const atributos = modelo.fields
+    .filter((f) => f.kind !== 'object')
+    .map((campo) => atributoMermaid(modelo, campo));
+  return [`  ${modelo.name} {`, ...atributos, '  }'];
+}
+
 function diagramaMermaid(): string {
-  const lineas = ['erDiagram'];
-  for (const modelo of modelos) {
-    for (const campo of modelo.fields) {
-      if (campo.kind !== 'object' || !campo.relationFromFields?.length) continue;
-      const destino = modelos.find((m) => m.name === campo.type);
-      const inverso = destino?.fields.find(
-        (f) => f.relationName === campo.relationName && f !== campo,
-      );
-      const ladoPadre = campo.isRequired ? '||' : '|o';
-      const ladoHijo = inverso?.isList ? 'o{' : 'o|';
-      lineas.push(
-        `  ${campo.type} ${ladoPadre}--${ladoHijo} ${modelo.name} : "${campo.relationFromFields.join(', ')}"`,
-      );
-    }
-  }
-  for (const modelo of modelos) {
-    lineas.push(`  ${modelo.name} {`);
-    for (const campo of modelo.fields.filter((f) => f.kind !== 'object')) {
-      const tipo = `${campo.type}${campo.isList ? '_lista' : ''}`;
-      const claves = [
-        campo.isId ? 'PK' : null,
-        esClaveForanea(modelo, campo) ? 'FK' : null,
-        esUnico(modelo, campo) ? 'UK' : null,
-      ].filter(Boolean);
-      lineas.push(`    ${tipo} ${campo.name}${claves.length ? ` ${claves.join(', ')}` : ''}`);
-    }
-    lineas.push('  }');
-  }
-  return ['```mermaid', ...lineas, '```'].join('\n');
+  const relaciones = modelos.flatMap((modelo) =>
+    modelo.fields.filter(esRelacionPropia).map((campo) => relacionMermaid(modelo, campo)),
+  );
+  const entidades = modelos.flatMap(entidadMermaid);
+  return ['```mermaid', 'erDiagram', ...relaciones, ...entidades, '```'].join('\n');
 }
 
 function reglaBorrado(modelo: Modelo, campo: Campo): string {
@@ -93,12 +104,16 @@ function tablaEntidad(modelo: Modelo): string {
   ].join('\n');
 }
 
+function codigo(texto: string): string {
+  return '`' + texto + '`';
+}
+
 function seccionEnums(): string {
-  return [
-    '| Enum | Valores |',
-    '| --- | --- |',
-    ...enums.map((e) => `| \`${e.name}\` | ${e.values.map((v) => `\`${v.name}\``).join(', ')} |`),
-  ].join('\n');
+  const filas = enums.map((e) => {
+    const valores = e.values.map((v) => codigo(v.name)).join(', ');
+    return `| ${codigo(e.name)} | ${valores} |`;
+  });
+  return ['| Enum | Valores |', '| --- | --- |', ...filas].join('\n');
 }
 
 const generado = [

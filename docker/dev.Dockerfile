@@ -7,7 +7,7 @@ ENV PNPM_HOME=/pnpm \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g pnpm@10.34.9
+    && npm install -g --ignore-scripts pnpm@10.34.9
 
 WORKDIR /app
 
