@@ -10,5 +10,10 @@
     "isolatedModules": false,
     "types": ["node"]
   },
+  "watchOptions": {
+    "watchFile": "dynamicPriorityPolling",
+    "watchDirectory": "dynamicPriorityPolling",
+    "excludeDirectories": ["**/node_modules", "dist"]
+  },
   "include": ["src"]
 }

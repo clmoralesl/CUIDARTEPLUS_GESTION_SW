@@ -1,0 +1,69 @@
+name: cuidarteplus
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/dev.Dockerfile
+  volumes:
+    - .:/app
+    - /app/node_modules
+    - /app/apps/api/node_modules
+    - /app/apps/web/node_modules
+    - /app/packages/core/node_modules
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cuidarte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cuidarte}
+      POSTGRES_DB: ${POSTGRES_DB:-cuidarte}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *app
+    command: pnpm --filter @cuidarte/api dev
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cuidarte}:${POSTGRES_PASSWORD:-cuidarte}@db:5432/${POSTGRES_DB:-cuidarte}
+      API_PORT: 3000
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '500'
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    command: pnpm --filter @cuidarte/web dev
+    environment:
+      VITE_API_URL: http://localhost:${API_PORT:-3000}
+      VITE_POLLING: 'true'
+    ports:
+      - '${WEB_PORT:-5173}:5173'
+    depends_on:
+      - api
+
+  adminer:
+    image: adminer:4
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - '${ADMINER_PORT:-8088}:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
