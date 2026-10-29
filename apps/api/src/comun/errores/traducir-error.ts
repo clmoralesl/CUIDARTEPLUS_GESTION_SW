@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { CodigoError, CuerpoError } from '@cuidarte/core';
+import type { CodigoError, CuerpoError } from '@autofix/core';
 import { ExcepcionApi } from './excepcion-api';
 
 export interface ErrorTraducido {
@@ -60,8 +60,11 @@ function traducirPrisma(error: Prisma.PrismaClientKnownRequestError): ErrorTradu
   if (error.code === 'P2025') {
     return armar(404, 'REGISTRO_NO_ENCONTRADO', 'El registro solicitado no existe.');
   }
-  if (error.code === 'P2004') {
+  if (error.code === 'P2000' || error.code === 'P2004' || error.code === 'P2011') {
     return armar(400, 'RESTRICCION_VIOLADA', 'Los datos no cumplen una regla de integridad.');
+  }
+  if (error.code === 'P2034') {
+    return armar(409, 'CONFLICTO', 'Otra operación modificó los mismos datos. Intente nuevamente.');
   }
   if (SIN_CONEXION_BD.has(error.code)) {
     return armar(

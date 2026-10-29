@@ -1,7 +1,7 @@
 import { AppShell, Burger, Group, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { Outlet } from 'react-router';
-import { APP_NOMBRE } from '@cuidarte/core';
+import { APP_NOMBRE } from '@autofix/core';
 import { IndicadorEstado } from './indicador-estado';
 import { InterruptorTema } from './interruptor-tema';
 import { MenuLateral } from './menu-lateral';

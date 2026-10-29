@@ -9,7 +9,7 @@
     "declaration": false,
     "types": ["vite/client", "node"],
     "paths": {
-      "@cuidarte/core": ["../../packages/core/src/index.ts"]
+      "@autofix/core": ["../../packages/core/src/index.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

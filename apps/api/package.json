@@ -1,12 +1,12 @@
 {
-  "name": "@cuidarte/api",
+  "name": "@autofix/api",
   "version": "0.1.0",
   "private": true,
-  "description": "API REST de CuidartePlus Gestión (NestJS)",
+  "description": "API REST de AutoFix Gestión (NestJS)",
   "type": "commonjs",
   "scripts": {
     "build": "prisma generate && tsc -p tsconfig.build.json",
-    "dev": "prisma generate && prisma migrate deploy && pnpm --filter @cuidarte/core build && tsc -p tsconfig.build.json && concurrently -k -n core,tsc,api -c cyan,yellow,green \"pnpm --filter @cuidarte/core dev\" \"tsc -w -p tsconfig.build.json --preserveWatchOutput\" \"nodemon dist/main.js\"",
+    "dev": "prisma generate && prisma migrate deploy && pnpm --filter @autofix/core build && tsc -p tsconfig.build.json && concurrently -k -n core,tsc,api -c cyan,yellow,green \"pnpm --filter @autofix/core dev\" \"tsc -w -p tsconfig.build.json --preserveWatchOutput\" \"nodemon dist/main.js\"",
     "start": "node dist/main.js",
     "test": "prisma generate && vitest run --passWithNoTests",
     "typecheck": "prisma generate && tsc --noEmit",
@@ -21,7 +21,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@cuidarte/core": "workspace:*",
+    "@autofix/core": "workspace:*",
     "@nestjs/common": "^11.2.8",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",

@@ -1,5 +1,5 @@
 import { Group, SegmentedControl, Text, Tooltip } from '@mantine/core';
-import { NOMBRES_ROL, Rol, ROLES } from '@cuidarte/core';
+import { NOMBRES_ROL, Rol, ROLES } from '@autofix/core';
 import { useSesion } from '../sesion/proveedor-sesion';
 
 export function SelectorRol() {

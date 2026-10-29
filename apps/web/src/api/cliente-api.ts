@@ -1,4 +1,4 @@
-import { esquemaCuerpoError, type CuerpoError } from '@cuidarte/core';
+import { esquemaCuerpoError, type CuerpoError } from '@autofix/core';
 import { leerRol } from '../sesion/almacenamiento';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -21,7 +21,10 @@ export async function solicitar<T>(ruta: string, opciones: RequestInit = {}): Pr
   let respuesta: Response;
   try {
     respuesta = await fetch(`${API_URL}${ruta}`, { ...opciones, headers: cabeceras });
-  } catch {
+  } catch (error: unknown) {
+    if ((error as { name?: string })?.name === 'AbortError') {
+      throw error;
+    }
     throw new ErrorSolicitud(0, {
       codigo: 'SIN_CONEXION',
       error: 'Sin conexión',

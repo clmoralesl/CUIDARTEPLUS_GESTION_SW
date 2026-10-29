@@ -1,5 +1,6 @@
 import '@fontsource-variable/inter';
 import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import '@mantine/notifications/styles.css';
 
 import { StrictMode } from 'react';

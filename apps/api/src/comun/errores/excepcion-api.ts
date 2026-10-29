@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { CodigoError } from '@cuidarte/core';
+import type { CodigoError } from '@autofix/core';
 
 export class ExcepcionApi extends HttpException {
   constructor(

@@ -1,8 +1,8 @@
 {
-  "name": "cuidarteplus-gestion",
+  "name": "autofix-gestion",
   "private": true,
   "type": "module",
-  "description": "Sistema de planificación, seguimiento y gestión del cambio de CuidartePlus",
+  "description": "Sistema de planificación, seguimiento y gestión del cambio de AutoFix",
   "packageManager": "pnpm@10.34.9",
   "engines": {
     "node": ">=22"
@@ -13,11 +13,11 @@
     "format": "prettier --write .",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "db:migrate": "docker compose exec api pnpm --filter @cuidarte/api db:migrate",
-    "db:deploy": "docker compose exec api pnpm --filter @cuidarte/api db:deploy",
-    "db:reset": "docker compose exec api pnpm --filter @cuidarte/api db:reset",
-    "db:seed": "docker compose exec api pnpm --filter @cuidarte/api db:seed",
-    "db:erd": "pnpm --filter @cuidarte/api db:erd && prettier --write docs/modelo-datos.md"
+    "db:migrate": "docker compose exec api pnpm --filter @autofix/api db:migrate",
+    "db:deploy": "docker compose exec api pnpm --filter @autofix/api db:deploy",
+    "db:reset": "docker compose exec api pnpm --filter @autofix/api db:reset",
+    "db:seed": "docker compose exec api pnpm --filter @autofix/api db:seed",
+    "db:erd": "pnpm --filter @autofix/api db:erd && prettier --write docs/modelo-datos.md"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

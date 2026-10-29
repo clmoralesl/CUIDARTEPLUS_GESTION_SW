@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@cuidarte/core': fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
+      '@autofix/core': fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
     },
   },
   server: {

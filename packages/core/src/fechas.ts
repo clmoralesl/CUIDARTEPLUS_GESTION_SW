@@ -1,0 +1,27 @@
+import { z } from './validacion';
+
+const PATRON_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+export function esFechaIsoValida(texto: string): boolean {
+  if (!PATRON_FECHA_ISO.test(texto)) return false;
+  const fecha = new Date(`${texto}T00:00:00.000Z`);
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().startsWith(texto);
+}
+
+export const esquemaFechaIso = z
+  .string({ error: 'Ingrese una fecha.' })
+  .refine(esFechaIsoValida, 'Ingrese una fecha válida con el formato AAAA-MM-DD.');
+
+export function fechaIsoADate(texto: string): Date {
+  return new Date(`${texto}T00:00:00.000Z`);
+}
+
+export function dateAFechaIso(fecha: Date): string {
+  return fecha.toISOString().slice(0, 10);
+}
+
+export function fechaLocalIso(fecha: Date = new Date()): string {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}

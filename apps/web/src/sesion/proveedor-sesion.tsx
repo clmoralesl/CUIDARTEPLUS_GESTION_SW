@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext } from 'react';
 import { useLocalStorage } from '@mantine/hooks';
-import type { Rol } from '@cuidarte/core';
+import type { Rol } from '@autofix/core';
 import { clienteConsultas } from '../api/cliente-consultas';
 import {
   CLAVE_PROYECTO,

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useMatch, useNavigate } from 'react-router';
 import { Select } from '@mantine/core';
 import { useProyectos } from '../api/proyectos';
 import { useSesion } from '../sesion/proveedor-sesion';
@@ -6,6 +7,8 @@ import { useSesion } from '../sesion/proveedor-sesion';
 export function SelectorProyecto() {
   const { data: proyectos, isLoading } = useProyectos();
   const { proyectoActivoId, cambiarProyecto } = useSesion();
+  const navegar = useNavigate();
+  const enDetalle = useMatch('/proyectos/:proyectoId');
 
   useEffect(() => {
     if (!proyectos) return;
@@ -34,8 +37,16 @@ export function SelectorProyecto() {
 
   const opciones = proyectos.map((p) => ({
     value: String(p.id),
-    label: p.nombre,
+    label: p.estado === 'CERRADO' ? `${p.nombre} (Cerrado)` : p.nombre,
   }));
+
+  const alCambiar = (valor: string | null) => {
+    const id = valor ? Number(valor) : null;
+    cambiarProyecto(id);
+    if (enDetalle && id !== null) {
+      navegar(`/proyectos/${id}`);
+    }
+  };
 
   return (
     <Select
@@ -44,7 +55,7 @@ export function SelectorProyecto() {
       w={240}
       data={opciones}
       value={proyectoActivoId !== null ? String(proyectoActivoId) : null}
-      onChange={(valor) => cambiarProyecto(valor ? Number(valor) : null)}
+      onChange={alCambiar}
       allowDeselect={false}
     />
   );

@@ -1,4 +1,4 @@
-# Sprint 01 · Levantamiento completo de CuidartePlus Gestión
+# Sprint 01 · Levantamiento completo de AutoFix Gestión
 
 **Objetivo del sprint:** entregar la aplicación integrada que cumple la rúbrica, sin EDT como módulo aparte y sin login. Debe correr en local con `docker compose up`, con el caso de prueba mínimo cargado y la demo de recálculo funcionando.
 
@@ -43,7 +43,7 @@ Tamaños: **S** ≈ medio día · **M** ≈ 1 día · **L** ≈ 2 días.
 
 - [ ] Existe `pnpm-workspace.yaml` con `apps/*` y `packages/*`.
 - [ ] Existe `tsconfig.base.json` con `strict: true` y cada paquete lo extiende.
-- [ ] `apps/web` y `apps/api` pueden importar `@cuidarte/core` sin errores de tipos.
+- [ ] `apps/web` y `apps/api` pueden importar `@autofix/core` sin errores de tipos.
 - [ ] `pnpm build` compila los 3 paquetes en el orden correcto (core primero).
 - [ ] `pnpm lint` ejecuta ESLint + Prettier en todo el repo y termina con 0 errores.
 - [ ] `pnpm test` ejecuta Vitest en `packages/core` con al menos 1 test de ejemplo en verde.
@@ -113,7 +113,7 @@ Tamaños: **S** ≈ medio día · **M** ≈ 1 día · **L** ≈ 2 días.
 - [ ] Los estados son Planificado, En curso y Cerrado, con las transiciones permitidas Planificado → En curso → Cerrado.
 - [ ] La acción "Cerrar proyecto" pide confirmación; un proyecto cerrado rechaza cualquier modificación propia o de sus hijos con `409` y la UI lo muestra en solo lectura con un banner.
 - [ ] Con rol CC no se puede crear, editar ni cerrar (403 en la API, botones deshabilitados).
-- [ ] El seed incluye 1 proyecto "CuidartePlus · Implementación" en estado En curso.
+- [ ] El seed incluye 1 proyecto "AutoFix · Implementación" en estado En curso.
 
 ### #6 Tareas jerárquicas y consolidación · `L` · `fullstack` `core`
 
@@ -395,7 +395,7 @@ Tamaños: **S** ≈ medio día · **M** ≈ 1 día · **L** ≈ 2 días.
 
 **Criterios de aceptación**
 
-- [ ] El botón "Descargar plantilla" entrega `plantilla_carga_cuidarteplus.xlsx` con estas hojas, en orden:
+- [ ] El botón "Descargar plantilla" entrega `plantilla_carga_autofix.xlsx` con estas hojas, en orden:
   - `Instrucciones`, `Proyecto`, `Calendario`, `Feriados`
   - `Tareas`, `Dependencias`, `Profesionales`, `Recursos`
   - `Asignaciones`, `Hitos`, `KPI`, `Solicitudes`
