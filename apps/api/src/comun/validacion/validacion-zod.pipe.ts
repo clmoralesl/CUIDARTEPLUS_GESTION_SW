@@ -1,5 +1,5 @@
 import { HttpStatus, PipeTransform } from '@nestjs/common';
-import { Esquema, validar } from '@cuidarte/core';
+import { Esquema, validar } from '@autofix/core';
 import { ExcepcionApi } from '../errores/excepcion-api';
 
 export class PipeValidacionZod<T> implements PipeTransform<unknown, T> {

@@ -2,7 +2,7 @@ import { Body, Controller, Get, INestApplication, NotFoundException, Post } from
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { z } from '@cuidarte/core';
+import { z } from '@autofix/core';
 import { configurarApp } from './configurar-app';
 import { Publico, Roles } from './comun/roles/roles.decorator';
 import { PipeValidacionZod } from './comun/validacion/validacion-zod.pipe';

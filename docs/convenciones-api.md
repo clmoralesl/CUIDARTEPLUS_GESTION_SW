@@ -1,4 +1,4 @@
-# Convenciones de API: CuidartePlus Gestión
+# Convenciones de API: AutoFix Gestión
 
 Estándares y contratos de comunicación entre el frontend (`apps/web`), el backend (`apps/api`) y los servicios externos del sistema.
 

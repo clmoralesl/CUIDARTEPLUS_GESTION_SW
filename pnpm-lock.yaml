@@ -35,7 +35,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@cuidarte/core':
+      '@autofix/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@nestjs/common':
@@ -93,7 +93,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@cuidarte/core':
+      '@autofix/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@fontsource-variable/inter':

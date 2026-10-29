@@ -1,6 +1,6 @@
 import { Button, Tooltip, type ButtonProps } from '@mantine/core';
 import type { ComponentPropsWithoutRef } from 'react';
-import type { Permiso } from '@cuidarte/core';
+import type { Permiso } from '@autofix/core';
 import { usePermisos } from '../sesion/use-permisos';
 
 type BotonProtegidoProps = ButtonProps &

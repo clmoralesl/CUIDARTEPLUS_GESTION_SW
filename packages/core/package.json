@@ -1,5 +1,5 @@
 {
-  "name": "@cuidarte/core",
+  "name": "@autofix/core",
   "version": "0.1.0",
   "private": true,
   "description": "Lógica de dominio pura: motor de cronograma, costos, KPI y esquemas compartidos",

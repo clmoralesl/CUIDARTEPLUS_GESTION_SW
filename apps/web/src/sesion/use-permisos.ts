@@ -1,4 +1,4 @@
-import { PERMISOS, tienePermiso, textoRestriccion, type Permiso } from '@cuidarte/core';
+import { PERMISOS, tienePermiso, textoRestriccion, type Permiso } from '@autofix/core';
 import { useSesion } from './proveedor-sesion';
 
 export function usePermisos() {

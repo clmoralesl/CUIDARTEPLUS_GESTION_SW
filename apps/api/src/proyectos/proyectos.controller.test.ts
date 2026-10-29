@@ -6,7 +6,7 @@ import { ProyectosService, ResumenProyecto } from './proyectos.service';
 describe('ProyectosController', () => {
   it('retorna la lista de proyectos provista por el servicio', async () => {
     const proyectosEjemplo: ResumenProyecto[] = [
-      { id: 1, nombre: 'CuidartePlus · Implementación', estado: EstadoProyecto.EN_CURSO },
+      { id: 1, nombre: 'AutoFix · Implementación', estado: EstadoProyecto.EN_CURSO },
     ];
     const servicioMock = {
       listar: async () => proyectosEjemplo,

@@ -1,4 +1,4 @@
-# CuidartePlus Gestión
+# AutoFix Gestión
 
 Sistema de planificación, seguimiento y gestión del cambio: proyectos, tareas jerárquicas, Carta Gantt con dependencias FS/SS/FF/SF, recursos y costos, hitos, KPI configurables, gestión del cambio en 10 etapas y dos tableros de comando.
 
@@ -29,7 +29,7 @@ docker compose up --build
 | adminer  | http://localhost:8088       | Cliente web de PostgreSQL (servidor `db`)  |
 | db       | `localhost:5432`            | PostgreSQL 16 (usuario/clave/BD en `.env`) |
 
-Los datos de PostgreSQL viven en el volumen `cuidarteplus_pgdata` y sobreviven a `docker compose down`. Para borrarlos: `docker compose down -v`.
+Los datos de PostgreSQL viven en el volumen `autofix_pgdata` y sobreviven a `docker compose down`. Para borrarlos: `docker compose down -v`.
 
 Al editar archivos en `apps/` o `packages/`, la API y la web se recargan solas (por sondeo de archivos, compatible con Windows).
 
@@ -68,7 +68,7 @@ Requisitos: Node.js 22 (ver `.nvmrc`) y pnpm 10 (`npm install -g pnpm@10`).
 | `pnpm test`      | Ejecuta los tests (Vitest) de todos los paquetes |
 | `pnpm typecheck` | Verifica tipos sin compilar                      |
 
-Desarrollo por paquete: `pnpm --filter @cuidarte/api dev` (requiere `DATABASE_URL`), `pnpm --filter @cuidarte/web dev`.
+Desarrollo por paquete: `pnpm --filter @autofix/api dev` (requiere `DATABASE_URL`), `pnpm --filter @autofix/web dev`.
 
 ## Planificación y convenciones
 

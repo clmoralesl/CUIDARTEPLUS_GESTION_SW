@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLES, Rol, esquemaRol, mensajeRolNoPermitido } from '@cuidarte/core';
+import { ROLES, Rol, esquemaRol, mensajeRolNoPermitido } from '@autofix/core';
 import { ExcepcionApi } from '../errores/excepcion-api';
 import { METADATO_PUBLICO, METADATO_ROLES } from './roles.decorator';
 

@@ -3,7 +3,7 @@ import { EstadoProyecto, PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function sembrar(): Promise<void> {
-  const nombreProyecto = 'CuidartePlus · Implementación';
+  const nombreProyecto = 'AutoFix · Implementación';
   const existente = await prisma.proyecto.findFirst({
     where: { nombre: nombreProyecto },
   });

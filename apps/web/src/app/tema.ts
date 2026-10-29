@@ -22,4 +22,4 @@ export const tema = createTheme({
   defaultRadius: 'sm',
 });
 
-export const CLAVE_ESQUEMA_COLOR = 'cuidarte:esquema-color';
+export const CLAVE_ESQUEMA_COLOR = 'autofix:esquema-color';

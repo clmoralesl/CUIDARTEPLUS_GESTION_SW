@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { CodigoError, CuerpoError } from '@cuidarte/core';
+import type { CodigoError, CuerpoError } from '@autofix/core';
 import { ExcepcionApi } from './excepcion-api';
 
 export interface ErrorTraducido {

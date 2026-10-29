@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { z } from '@cuidarte/core';
+import { z } from '@autofix/core';
 import { describe, expect, it } from 'vitest';
 import { ExcepcionApi } from '../errores/excepcion-api';
 import { PipeValidacionZod } from './validacion-zod.pipe';

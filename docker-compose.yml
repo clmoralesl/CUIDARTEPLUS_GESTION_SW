@@ -1,4 +1,4 @@
-name: cuidarteplus
+name: autofix
 
 x-app: &app
   build:
@@ -16,9 +16,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-cuidarte}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cuidarte}
-      POSTGRES_DB: ${POSTGRES_DB:-cuidarte}
+      POSTGRES_USER: ${POSTGRES_USER:-autofix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autofix}
+      POSTGRES_DB: ${POSTGRES_DB:-autofix}
     ports:
       - '${DB_PORT:-5432}:5432'
     volumes:
@@ -31,9 +31,9 @@ services:
 
   api:
     <<: *app
-    command: pnpm --filter @cuidarte/api dev
+    command: pnpm --filter @autofix/api dev
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cuidarte}:${POSTGRES_PASSWORD:-cuidarte}@db:5432/${POSTGRES_DB:-cuidarte}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-autofix}:${POSTGRES_PASSWORD:-autofix}@db:5432/${POSTGRES_DB:-autofix}
       API_PORT: 3000
       CHOKIDAR_USEPOLLING: 'true'
       CHOKIDAR_INTERVAL: '500'
@@ -46,7 +46,7 @@ services:
 
   web:
     <<: *app
-    command: pnpm --filter @cuidarte/web dev
+    command: pnpm --filter @autofix/web dev
     environment:
       VITE_API_URL: http://localhost:${API_PORT:-3000}
       VITE_POLLING: 'true'

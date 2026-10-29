@@ -1,4 +1,4 @@
-export const APP_NOMBRE = 'CuidartePlus Gestión';
+export const APP_NOMBRE = 'AutoFix Gestión';
 
 export const NIVELES_TAREA = ['ETAPA', 'ACTIVIDAD', 'SUBACTIVIDAD'] as const;
 export type NivelTarea = (typeof NIVELES_TAREA)[number];
