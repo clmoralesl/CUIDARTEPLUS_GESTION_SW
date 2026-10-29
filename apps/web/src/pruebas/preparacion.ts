@@ -27,3 +27,4 @@ class MockResizeObserver {
 }
 
 window.ResizeObserver = MockResizeObserver;
+window.HTMLElement.prototype.scrollIntoView = () => {};

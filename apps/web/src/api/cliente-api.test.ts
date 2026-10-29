@@ -78,7 +78,7 @@ describe('cliente-api', () => {
     }
   });
 
-  it('produce error SIN_CONEXION si fetch es rechazado', async () => {
+  it('produce error SIN_CONEXION si fetch es rechazado por fallo de red', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(solicitar('/salud')).rejects.toThrow(ErrorSolicitud);
@@ -89,6 +89,13 @@ describe('cliente-api', () => {
       expect(err.estado).toBe(0);
       expect(err.cuerpo.codigo).toBe('SIN_CONEXION');
     }
+  });
+
+  it('propaga AbortError tal cual cuando la peticion es cancelada', async () => {
+    const errorAbort = new DOMException('The user aborted a request.', 'AbortError');
+    globalThis.fetch = vi.fn().mockRejectedValue(errorAbort);
+
+    await expect(solicitar('/cancelable')).rejects.toBe(errorAbort);
   });
 
   it('produce RESPUESTA_INESPERADA si la API responde 500 con HTML', async () => {

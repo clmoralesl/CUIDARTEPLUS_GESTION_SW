@@ -58,4 +58,32 @@ describe('BotonProtegido', () => {
     await userEvent.hover(screen.getByRole('button', { name: 'Crear' }));
     expect(await screen.findByText('Solo Jefe de Proyecto')).toBeInTheDocument();
   });
+
+  it('muestra "El proyecto está cerrado" con JP y proyecto cerrado (caso 30)', async () => {
+    renderConSesion(
+      <BotonProtegido permiso="editarPlanificacion" estadoProyecto="CERRADO" onClick={vi.fn()}>
+        Editar
+      </BotonProtegido>,
+      'JP',
+    );
+
+    const boton = screen.getByRole('button', { name: 'Editar' });
+    expect(boton).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.hover(boton);
+    expect(await screen.findByText('El proyecto está cerrado')).toBeInTheDocument();
+  });
+
+  it('prioriza "Solo Jefe de Proyecto" sobre proyecto cerrado con rol CC (caso 30)', async () => {
+    renderConSesion(
+      <BotonProtegido permiso="editarPlanificacion" estadoProyecto="CERRADO" onClick={vi.fn()}>
+        Editar
+      </BotonProtegido>,
+      'CC',
+    );
+
+    const boton = screen.getByRole('button', { name: 'Editar' });
+    expect(boton).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.hover(boton);
+    expect(await screen.findByText('Solo Jefe de Proyecto')).toBeInTheDocument();
+  });
 });

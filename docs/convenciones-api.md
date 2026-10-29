@@ -18,20 +18,57 @@ Al operar exclusivamente en un entorno local aislado con Docker, no existe un mo
    - `/salud`
    - `/informacion`
    - `/proyectos`
+   - `/proyectos/:proyectoId`
+   - `/proyectos/:proyectoId/iniciar`
+   - `/proyectos/:proyectoId/cerrar`
    - `/proyectos/:proyectoId/tareas`
    - `/solicitudes-cambio/:id/aprobar`
 2. **Métodos HTTP estándar**:
    - `GET`: lectura y consulta.
    - `POST`: creación de registros y ejecución de acciones de negocio.
    - `PUT` / `PATCH`: actualización completa o parcial.
-   - `DELETE`: eliminación de recursos.
+   - `DELETE`: eliminación de recursos (no aplica para proyectos, cuya historia se preserva cerrándolos).
 3. **Parámetros y claves JSON en español**:
    - Identificadores: `proyectoId`, `tareaId`, `cambioId`.
-   - Propiedades de cuerpo: `nombre`, `descripcion`, `fechaInicio`, `presupuesto`.
+   - Propiedades de cuerpo: `nombre`, `descripcion`, `fechaInicio`, `fechaFin`, `presupuesto`, `responsable`.
 
 ---
 
-## 3. Cabecera `X-Rol` y control de acceso
+## 3. Endpoints del módulo de proyectos
+
+| Método  | Ruta                             | Rol     | Código | Descripción                                   | Errores específicos                         |
+| ------- | -------------------------------- | ------- | ------ | --------------------------------------------- | ------------------------------------------- |
+| `GET`   | `/proyectos`                     | JP y CC | `200`  | Listado resumen de proyectos                  | —                                           |
+| `GET`   | `/proyectos/:proyectoId`         | JP y CC | `200`  | Detalle completo de un proyecto               | `400` id inválido, `404`                    |
+| `POST`  | `/proyectos`                     | JP      | `201`  | Creación de proyecto y calendario por defecto | `400`, `403`                                |
+| `PATCH` | `/proyectos/:proyectoId`         | JP      | `200`  | Actualización de campos editables             | `400`, `403`, `404`, `409 PROYECTO_CERRADO` |
+| `POST`  | `/proyectos/:proyectoId/iniciar` | JP      | `200`  | Transición a EN_CURSO                         | `403`, `404`, `409 TRANSICION_INVALIDA`     |
+| `POST`  | `/proyectos/:proyectoId/cerrar`  | JP      | `200`  | Transición a CERRADO                          | `403`, `404`, `409 TRANSICION_INVALIDA`     |
+
+### Reglas de validación y ciclo de vida
+
+1. **Orden de comprobación**: Las validaciones de esquema sintáctico y tipado (código HTTP `400`) se evalúan antes de las reglas de negocio o estado en base de datos (`409`). Si un cuerpo incluye campos desconocidos o no permitidos (como intentar enviar `estado` vía `PATCH`), el servidor responde `400 VALIDACION_FALLIDA` inmediatamente.
+2. **Esquemas estrictos**: Se aplica `.strict()` en Zod para prevenir la asignación masiva (_mass assignment_). Los estados solo pueden alterarse mediante sus respectivas rutas de acción (`/iniciar` y `/cerrar`).
+3. **Regla de proyecto cerrado**: Un proyecto con estado `CERRADO` es inmutable. Toda escritura sobre el proyecto o sus elementos dependientes (tareas, dependencias, recursos e hitos) debe verificar `obtenerProyectoAbierto(tx, proyectoId)` dentro de la transacción, respondiendo `409 PROYECTO_CERRADO` ante cualquier intento de edición.
+
+---
+
+## 4. Representación de fechas y montos
+
+### Fechas
+
+- **Interfaz y visualización (D3)**: El usuario visualiza, introduce y exporta fechas exclusivamente en formato `DD-MM-AAAA` (`formatearFecha`).
+- **Transporte interno**: En los cuerpos JSON y parámetros de API, las fechas viajan como cadenas ISO 8601 en formato `AAAA-MM-DD` (`esquemaFechaIso`), asegurando orden lexicográfico y neutralidad de zonas horarias. Las marcas temporales de auditoría (`creadoEn`, `actualizadoEn`) se transfieren en ISO 8601 completo con zona horaria UTC (`formatearFechaHora`).
+
+### Montos
+
+- **Precisión en almacenamiento (D4)**: Los montos se guardan en base de datos como pesos con dos decimales (`Decimal(14,2)`), admitiendo valores hasta `999.999.999.999,99`.
+- **Cálculos y redondeo**: Todo cálculo que produzca un monto (costos, totales, valor ganado) debe redondearse al final a dos decimales con `redondearMonto`, preservando la precisión completa en los cálculos intermedios.
+- **Visualización**: En tablas, tarjetas y vistas generales, los montos se presentan formateados en CLP sin decimales (`formatearMonto`).
+
+---
+
+## 5. Cabecera `X-Rol` y control de acceso
 
 Toda ruta de la API, a excepción de las explícitamente declaradas públicas (`@Publico()`), exige el envío de la cabecera HTTP:
 
@@ -63,7 +100,7 @@ X-Rol: JP | CC
 
 ---
 
-## 4. Formato estándar de errores
+## 6. Formato estándar de errores
 
 Todas las respuestas con código HTTP 4xx o 5xx (excepto la sonda `/salud`) devuelven una estructura uniforme en español:
 
@@ -78,33 +115,31 @@ Todas las respuestas con código HTTP 4xx o 5xx (excepto la sonda `/salud`) devu
 
 ### Catálogo de códigos de error
 
-| Estado | `codigo`                     | `error`                    | Origen o causa                                 |
-| ------ | ---------------------------- | -------------------------- | ---------------------------------------------- |
-| 400    | `ROL_REQUERIDO`              | Solicitud inválida         | Petición sin cabecera `X-Rol`                  |
-| 400    | `ROL_INVALIDO`               | Solicitud inválida         | Cabecera `X-Rol` con valor no permitido        |
-| 400    | `VALIDACION_FALLIDA`         | Solicitud inválida         | Falla de validación en esquema Zod             |
-| 400    | `RESTRICCION_VIOLADA`        | Solicitud inválida         | Violación de restricción `CHECK` (PostgreSQL)  |
-| 400    | `SOLICITUD_INVALIDA`         | Solicitud inválida         | JSON malformado o error de formato en petición |
-| 403    | `ROL_NO_PERMITIDO`           | Acceso denegado            | Rol no autorizado según `@Roles(...)`          |
-| 403    | `ACCESO_DENEGADO`            | Acceso denegado            | Acción no permitida                            |
-| 404    | `RECURSO_NO_ENCONTRADO`      | No encontrado              | Ruta no mapeada o endpoint inexistente         |
-| 404    | `REGISTRO_NO_ENCONTRADO`     | No encontrado              | Registro no encontrado en base de datos        |
-| 409    | `REGISTRO_DUPLICADO`         | Conflicto                  | Conflicto de unicidad (`P2002` en Prisma)      |
-| 409    | `REGISTRO_RELACIONADO`       | Conflicto                  | Conflicto de clave foránea (`P2003`)           |
-| 409    | `CONFLICTO`                  | Conflicto                  | Operación inconsistente con estado actual      |
-| 413    | `CONTENIDO_DEMASIADO_GRANDE` | Contenido demasiado grande | Carga útil mayor al límite del analizador      |
-| 500    | `ERROR_INTERNO`              | Error interno              | Excepción interna no controlada                |
-| 503    | `BD_NO_DISPONIBLE`           | Servicio no disponible     | Conexión con PostgreSQL no establecida         |
-| 0      | `SIN_CONEXION`               | Sin conexión               | Cliente web sin conectividad con API           |
-| (otro) | `RESPUESTA_INESPERADA`       | Error                      | Respuesta no interpretable en cliente          |
-
-### Comportamiento en rutas no encontradas
-
-Si se solicita una ruta inexistente (por ejemplo `GET /no-existe`), el servidor responde directamente `404 Not Found` con código `RECURSO_NO_ENCONTRADO`, incluso si no se envió la cabecera `X-Rol`.
+| Estado | `codigo`                     | `error`                    | Origen o causa                                                      |
+| ------ | ---------------------------- | -------------------------- | ------------------------------------------------------------------- |
+| 400    | `ROL_REQUERIDO`              | Solicitud inválida         | Petición sin cabecera `X-Rol`                                       |
+| 400    | `ROL_INVALIDO`               | Solicitud inválida         | Cabecera `X-Rol` con valor no permitido                             |
+| 400    | `VALIDACION_FALLIDA`         | Solicitud inválida         | Falla de validación en esquema Zod o identificador inválido         |
+| 400    | `RESTRICCION_VIOLADA`        | Solicitud inválida         | Violación de restricción `CHECK` o longitud máxima en base de datos |
+| 400    | `SOLICITUD_INVALIDA`         | Solicitud inválida         | JSON malformado o error de formato en petición                      |
+| 403    | `ROL_NO_PERMITIDO`           | Acceso denegado            | Rol no autorizado según `@Roles(...)`                               |
+| 403    | `ACCESO_DENEGADO`            | Acceso denegado            | Acción no permitida                                                 |
+| 404    | `RECURSO_NO_ENCONTRADO`      | No encontrado              | Ruta no mapeada o endpoint inexistente                              |
+| 404    | `REGISTRO_NO_ENCONTRADO`     | No encontrado              | Registro no encontrado en base de datos                             |
+| 409    | `REGISTRO_DUPLICADO`         | Conflicto                  | Conflicto de unicidad (`P2002` en Prisma)                           |
+| 409    | `REGISTRO_RELACIONADO`       | Conflicto                  | Conflicto de clave foránea (`P2003`)                                |
+| 409    | `PROYECTO_CERRADO`           | Conflicto                  | Intento de modificación sobre un proyecto en estado CERRADO         |
+| 409    | `TRANSICION_INVALIDA`        | Conflicto                  | Transición de estado no admitida por la máquina de estados          |
+| 409    | `CONFLICTO`                  | Conflicto                  | Conflicto de concurrencia optimista (`P2034`)                       |
+| 413    | `CONTENIDO_DEMASIADO_GRANDE` | Contenido demasiado grande | Carga útil mayor al límite del analizador                           |
+| 500    | `ERROR_INTERNO`              | Error interno              | Excepción interna no controlada                                     |
+| 503    | `BD_NO_DISPONIBLE`           | Servicio no disponible     | Conexión con PostgreSQL no establecida                              |
+| 0      | `SIN_CONEXION`               | Sin conexión               | Cliente web sin conectividad con API                                |
+| (otro) | `RESPUESTA_INESPERADA`       | Error                      | Respuesta no interpretable en cliente                               |
 
 ---
 
-## 5. Sonda de salud (`/salud`)
+## 7. Sonda de salud (`/salud`)
 
 El endpoint `GET /salud` es público y responde con un contrato especializado de diagnóstico para monitorear el estado de la infraestructura:
 

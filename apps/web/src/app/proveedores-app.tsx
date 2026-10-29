@@ -1,4 +1,7 @@
+import 'dayjs/locale/es';
 import { localStorageColorSchemeManager, MantineProvider } from '@mantine/core';
+import { DatesProvider } from '@mantine/dates';
+import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
@@ -7,7 +10,9 @@ import { ProveedorSesion } from '../sesion/proveedor-sesion';
 import { enrutador } from './enrutador';
 import { CLAVE_ESQUEMA_COLOR, tema } from './tema';
 
-const gestorEsquemaColor = localStorageColorSchemeManager({ key: CLAVE_ESQUEMA_COLOR });
+const gestorEsquemaColor = localStorageColorSchemeManager({
+  key: CLAVE_ESQUEMA_COLOR,
+});
 
 export function ProveedoresApp() {
   return (
@@ -16,12 +21,16 @@ export function ProveedoresApp() {
       defaultColorScheme="light"
       colorSchemeManager={gestorEsquemaColor}
     >
-      <Notifications position="top-right" />
-      <QueryClientProvider client={clienteConsultas}>
-        <ProveedorSesion>
-          <RouterProvider router={enrutador} />
-        </ProveedorSesion>
-      </QueryClientProvider>
+      <ModalsProvider>
+        <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1 }}>
+          <Notifications position="top-right" />
+          <QueryClientProvider client={clienteConsultas}>
+            <ProveedorSesion>
+              <RouterProvider router={enrutador} />
+            </ProveedorSesion>
+          </QueryClientProvider>
+        </DatesProvider>
+      </ModalsProvider>
     </MantineProvider>
   );
 }

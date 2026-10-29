@@ -8,6 +8,10 @@ const FORMATO_CLP = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 0,
 });
 
+const FORMATO_PORCENTAJE = new Intl.NumberFormat('es-CL', {
+  maximumFractionDigits: 1,
+});
+
 const FORMATO_FECHA_HORA = new Intl.DateTimeFormat('es-CL', {
   timeZone: 'America/Santiago',
   day: '2-digit',
@@ -47,4 +51,11 @@ export function formatearMonto(valor: number | string | null | undefined): strin
   const numero = typeof valor === 'number' ? valor : Number(valor);
   if (!Number.isFinite(numero)) return SIN_DATO;
   return FORMATO_CLP.format(Math.round(numero) || 0);
+}
+
+export function formatearPorcentaje(valor: number | string | null | undefined): string {
+  if (valor === null || valor === undefined || valor === '') return SIN_DATO;
+  const numero = typeof valor === 'number' ? valor : Number(valor);
+  if (!Number.isFinite(numero)) return SIN_DATO;
+  return `${FORMATO_PORCENTAJE.format(numero)} %`;
 }

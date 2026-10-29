@@ -1,0 +1,58 @@
+import { Injectable } from '@nestjs/common';
+import { AccionBitacora, Prisma } from '@prisma/client';
+import type { Rol } from '@autofix/core';
+import { ROL_BD } from '../roles/rol-bd';
+import { CambioCampo, ValorBitacora } from './diferencias';
+
+export interface ContextoBitacora {
+  proyectoId: number;
+  entidad: string;
+  entidadId: number;
+  rol: Rol;
+}
+
+const aJson = (
+  valor: ValorBitacora | Record<string, ValorBitacora>,
+): Prisma.InputJsonValue | typeof Prisma.DbNull =>
+  valor === null ? Prisma.DbNull : (valor as Prisma.InputJsonValue);
+
+@Injectable()
+export class BitacoraService {
+  async registrarCambios(
+    tx: Prisma.TransactionClient,
+    contexto: ContextoBitacora,
+    accion: AccionBitacora,
+    cambios: readonly CambioCampo[],
+  ): Promise<void> {
+    if (cambios.length === 0) return;
+    await tx.bitacora.createMany({
+      data: cambios.map((cambio) => ({
+        proyectoId: contexto.proyectoId,
+        entidad: contexto.entidad,
+        entidadId: contexto.entidadId,
+        rol: ROL_BD[contexto.rol],
+        accion,
+        campo: cambio.campo,
+        valorAnterior: aJson(cambio.anterior),
+        valorNuevo: aJson(cambio.nuevo),
+      })),
+    });
+  }
+
+  async registrarCreacion(
+    tx: Prisma.TransactionClient,
+    contexto: ContextoBitacora,
+    instantanea: Record<string, ValorBitacora>,
+  ): Promise<void> {
+    await tx.bitacora.create({
+      data: {
+        proyectoId: contexto.proyectoId,
+        entidad: contexto.entidad,
+        entidadId: contexto.entidadId,
+        rol: ROL_BD[contexto.rol],
+        accion: AccionBitacora.CREAR,
+        valorNuevo: aJson(instantanea),
+      },
+    });
+  }
+}

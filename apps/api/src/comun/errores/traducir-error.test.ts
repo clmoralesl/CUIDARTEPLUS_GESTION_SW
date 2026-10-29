@@ -46,14 +46,29 @@ describe('traducirError', () => {
     expect(resultado.cuerpo.codigo).toBe('REGISTRO_NO_ENCONTRADO');
   });
 
-  it('traduce Prisma P2004 a 400 RESTRICCION_VIOLADA', () => {
-    const errorPrisma = new Prisma.PrismaClientKnownRequestError('check', {
-      code: 'P2004',
+  it('traduce Prisma P2000, P2004 y P2011 a 400 RESTRICCION_VIOLADA', () => {
+    for (const code of ['P2000', 'P2004', 'P2011'] as const) {
+      const errorPrisma = new Prisma.PrismaClientKnownRequestError('restriccion', {
+        code,
+        clientVersion: '6',
+      });
+      const resultado = traducirError(errorPrisma);
+      expect(resultado.estado).toBe(400);
+      expect(resultado.cuerpo.codigo).toBe('RESTRICCION_VIOLADA');
+    }
+  });
+
+  it('traduce Prisma P2034 a 409 CONFLICTO', () => {
+    const errorPrisma = new Prisma.PrismaClientKnownRequestError('conflicto transaccion', {
+      code: 'P2034',
       clientVersion: '6',
     });
     const resultado = traducirError(errorPrisma);
-    expect(resultado.estado).toBe(400);
-    expect(resultado.cuerpo.codigo).toBe('RESTRICCION_VIOLADA');
+    expect(resultado.estado).toBe(409);
+    expect(resultado.cuerpo.codigo).toBe('CONFLICTO');
+    expect(resultado.cuerpo.mensaje).toBe(
+      'Otra operación modificó los mismos datos. Intente nuevamente.',
+    );
   });
 
   it('traduce PrismaClientUnknownRequestError con 23514 a 400 RESTRICCION_VIOLADA', () => {

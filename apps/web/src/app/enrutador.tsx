@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { EstructuraApp } from '../diseno/estructura-app';
+import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
@@ -20,6 +21,10 @@ export const enrutador = createBrowserRouter([
         element: <Navigate to="/proyectos" replace />,
       },
       ...rutasModulos,
+      {
+        path: 'proyectos/:proyectoId',
+        element: <PaginaDetalleProyecto />,
+      },
       {
         path: '*',
         element: <PaginaNoEncontrada />,
