@@ -3,3 +3,8 @@ dist
 coverage
 pnpm-lock.yaml
 *.pdf
+colaboracion
+CLAUDE.md
+.agents
+.claude
+GEMINI.md

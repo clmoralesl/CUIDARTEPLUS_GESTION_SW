@@ -70,6 +70,24 @@ Requisitos: Node.js 22 (ver `.nvmrc`) y pnpm 10 (`npm install -g pnpm@10`).
 
 Desarrollo por paquete: `pnpm --filter @cuidarte/api dev` (requiere `DATABASE_URL`), `pnpm --filter @cuidarte/web dev`.
 
-## Planificación
+## Planificación y convenciones
 
-El plan del sprint está en [docs/SPRINT_01.md](docs/SPRINT_01.md) y en los issues del milestone "Sprint 01".
+El plan del sprint está en [docs/SPRINT_01.md](docs/SPRINT_01.md) y las convenciones de rutas, cabeceras, roles y formato de errores se detallan en [docs/convenciones-api.md](docs/convenciones-api.md).
+
+## Uso sin conexión
+
+El sistema está diseñado para operar en un equipo local completamente desconectado de internet:
+
+1. **Construcción previa con conexión**: Los contenedores y dependencias se construyen inicialmente con acceso a la red:
+   ```bash
+   docker compose up --build -V
+   ```
+2. **Ejecución y demostración sin red**: En operación offline o demostraciones, levantar los servicios existentes **sin** los modificadores `--build` ni `-V`:
+   ```bash
+   docker compose up
+   ```
+3. **Advertencia de reconstrucción sin conexión**: Si se ejecuta `docker compose up --build` sin acceso a internet tras modificar dependencias en algún `package.json`, el proceso fallará al no poder descargar paquetes del registro npm.
+4. **Persistencia local e integridad**:
+   - Todo recurso visual (tipografía Inter Variable, íconos Tabler, estilos CSS de Mantine) está empaquetado localmente en el bundle generado por Vite, sin llamadas a CDNs externas.
+   - La variable `CHECKPOINT_DISABLE: '1'` en el servicio `api` desactiva las comprobaciones de versión en línea de Prisma al ejecutar `prisma generate` durante el arranque.
+   - Si se eliminan los volúmenes con `docker compose down -v` sin conexión, las imágenes construidas se conservan localmente; el sistema levanta normalmente y basta ejecutar `pnpm db:reset` para recrear las tablas y sembrar los datos iniciales.
