@@ -1,0 +1,19 @@
+export interface Modulo {
+  ruta: string;
+  titulo: string;
+  disponible: boolean;
+}
+
+export const MODULOS: Modulo[] = [
+  { ruta: 'proyectos', titulo: 'Proyectos', disponible: true },
+  { ruta: 'tareas', titulo: 'Tareas', disponible: false },
+  { ruta: 'gantt', titulo: 'Gantt', disponible: false },
+  { ruta: 'recursos', titulo: 'Recursos', disponible: false },
+  { ruta: 'hitos', titulo: 'Hitos', disponible: false },
+  { ruta: 'kpi', titulo: 'KPI', disponible: false },
+  { ruta: 'cambios', titulo: 'Cambios', disponible: false },
+  { ruta: 'tablero-proyecto', titulo: 'Tablero proyecto', disponible: false },
+  { ruta: 'tablero-cambio', titulo: 'Tablero cambio', disponible: false },
+  { ruta: 'importar-exportar', titulo: 'Importar/Exportar', disponible: false },
+  { ruta: 'bitacora', titulo: 'Bitácora', disponible: false },
+];

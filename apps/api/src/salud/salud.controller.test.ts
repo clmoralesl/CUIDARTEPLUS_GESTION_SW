@@ -1,5 +1,5 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
-import { describe, expect, it } from 'vitest';
+import { HttpStatus } from '@nestjs/common';
+import { describe, expect, it, vi } from 'vitest';
 import { SaludController } from './salud.controller';
 import { EstadoBaseDatos, SaludService } from './salud.service';
 
@@ -10,18 +10,22 @@ function controladorCon(estado: EstadoBaseDatos): SaludController {
 
 describe('SaludController', () => {
   it('responde ok cuando la base de datos está operativa', async () => {
-    await expect(controladorCon('operativa').obtener()).resolves.toEqual({
+    const respuestaMock = { status: vi.fn() };
+    const resultado = await controladorCon('operativa').obtener(respuestaMock);
+    expect(resultado).toEqual({
       estado: 'ok',
       bd: 'operativa',
     });
+    expect(respuestaMock.status).not.toHaveBeenCalled();
   });
 
   it('responde 503 cuando la base de datos está caída', async () => {
-    const error = await controladorCon('caida')
-      .obtener()
-      .catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(HttpException);
-    expect((error as HttpException).getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE);
-    expect((error as HttpException).getResponse()).toEqual({ estado: 'error', bd: 'caida' });
+    const respuestaMock = { status: vi.fn() };
+    const resultado = await controladorCon('caida').obtener(respuestaMock);
+    expect(respuestaMock.status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+    expect(resultado).toEqual({
+      estado: 'error',
+      bd: 'caida',
+    });
   });
 });
