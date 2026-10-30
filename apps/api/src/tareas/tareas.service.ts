@@ -3,6 +3,7 @@ import { AccionBitacora, Prisma, type Tarea } from '@prisma/client';
 import {
   CAMPOS_CALCULADOS,
   CAMPOS_EDITABLES,
+  calcularInicioPlan,
   contarDescendientes,
   dateAFechaIso,
   esJerarquiaValida,
@@ -20,6 +21,7 @@ import { diferencias } from '../comun/bitacora/diferencias';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { PrismaService } from '../prisma/prisma.service';
 import { errorProyectoNoEncontrado, obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
+import { cargarCalendarioLaboral } from '../calendario/calendario-laboral';
 import { ArbolTareasService } from './arbol-tareas.service';
 
 export const errorTareaNoEncontrada = () =>
@@ -115,6 +117,7 @@ export class TareasService {
     return this.prisma.$transaction(
       async (tx) => {
         await obtenerProyectoAbierto(tx, proyectoId, { bloquear: true });
+        const calendario = await cargarCalendarioLaboral(tx, proyectoId);
 
         if (datos.padreId !== null) {
           const padre = await tx.tarea.findFirst({
@@ -159,7 +162,10 @@ export class TareasService {
         }
 
         const duracion = datos.duracionDias ?? 1;
-        const inicioPlanDate = datos.inicioPlan ? fechaIsoADate(datos.inicioPlan) : null;
+        const inicioNormalizado = datos.inicioPlan
+          ? calcularInicioPlan(datos.inicioPlan, calendario)
+          : null;
+        const inicioPlanDate = inicioNormalizado ? fechaIsoADate(inicioNormalizado) : null;
 
         const creada = await tx.tarea.create({
           data: {
@@ -178,7 +184,7 @@ export class TareasService {
           },
         });
 
-        const arbolActualizado = await this.arbol.reorganizar(tx, proyectoId);
+        const arbolActualizado = await this.arbol.reorganizar(tx, proyectoId, calendario);
         const tareaReorganizada = arbolActualizado.tareas.find((t) => t.id === creada.id);
 
         await this.bitacora.registrarCreacion(
@@ -195,7 +201,7 @@ export class TareasService {
             nivel: creada.nivel,
             padreId: creada.padreId,
             duracionDias: creada.duracionDias,
-            inicioPlan: datos.inicioPlan ?? null,
+            inicioPlan: inicioNormalizado,
           },
         );
 
@@ -208,9 +214,16 @@ export class TareasService {
   async actualizar(tareaId: number, datos: ActualizarTarea, rol: Rol): Promise<ArbolTareas> {
     return this.prisma.$transaction(
       async (tx) => {
+        const referencia = await tx.tarea.findUnique({
+          where: { id: tareaId },
+          select: { proyectoId: true },
+        });
+        if (!referencia) throw errorTareaNoEncontrada();
+        await obtenerProyectoAbierto(tx, referencia.proyectoId, { bloquear: true });
         const tarea = await tx.tarea.findUnique({ where: { id: tareaId } });
         if (!tarea) throw errorTareaNoEncontrada();
-        await obtenerProyectoAbierto(tx, tarea.proyectoId, { bloquear: true });
+
+        const calendario = await cargarCalendarioLaboral(tx, tarea.proyectoId);
 
         const tieneHijas = (await tx.tarea.count({ where: { padreId: tareaId } })) > 0;
         const calculados = CAMPOS_CALCULADOS.filter((campo) => campo in datos);
@@ -218,12 +231,24 @@ export class TareasService {
           throw errorCampoCalculado(calculados);
         }
 
-        validarFechasReales(tarea, datos);
+        const datosNormalizados: ActualizarTarea = { ...datos };
+        if (
+          'inicioPlan' in datosNormalizados &&
+          datosNormalizados.inicioPlan !== null &&
+          datosNormalizados.inicioPlan !== undefined
+        ) {
+          datosNormalizados.inicioPlan = calcularInicioPlan(
+            datosNormalizados.inicioPlan,
+            calendario,
+          );
+        }
+
+        validarFechasReales(tarea, datosNormalizados);
 
         const antes = tarea;
         await tx.tarea.update({
           where: { id: tareaId },
-          data: aDatosPrisma(datos),
+          data: aDatosPrisma(datosNormalizados),
         });
         const despues = await tx.tarea.findUniqueOrThrow({
           where: { id: tareaId },
@@ -241,11 +266,11 @@ export class TareasService {
           diferencias(
             antes,
             despues,
-            CAMPOS_EDITABLES.filter((c) => c in datos),
+            CAMPOS_EDITABLES.filter((c) => c in datosNormalizados),
           ),
         );
 
-        return this.arbol.reorganizar(tx, tarea.proyectoId);
+        return this.arbol.reorganizar(tx, tarea.proyectoId, calendario);
       },
       { timeout: 15_000 },
     );
@@ -254,9 +279,14 @@ export class TareasService {
   async mover(tareaId: number, datos: MoverTarea, rol: Rol): Promise<ArbolTareas> {
     return this.prisma.$transaction(
       async (tx) => {
+        const referencia = await tx.tarea.findUnique({
+          where: { id: tareaId },
+          select: { proyectoId: true },
+        });
+        if (!referencia) throw errorTareaNoEncontrada();
+        await obtenerProyectoAbierto(tx, referencia.proyectoId, { bloquear: true });
         const tarea = await tx.tarea.findUnique({ where: { id: tareaId } });
         if (!tarea) throw errorTareaNoEncontrada();
-        await obtenerProyectoAbierto(tx, tarea.proyectoId, { bloquear: true });
 
         if (datos.padreId !== null) {
           const padre = await tx.tarea.findFirst({
@@ -342,9 +372,14 @@ export class TareasService {
   async eliminar(tareaId: number, rol: Rol): Promise<ArbolTareas> {
     return this.prisma.$transaction(
       async (tx) => {
+        const referencia = await tx.tarea.findUnique({
+          where: { id: tareaId },
+          select: { proyectoId: true },
+        });
+        if (!referencia) throw errorTareaNoEncontrada();
+        await obtenerProyectoAbierto(tx, referencia.proyectoId, { bloquear: true });
         const tarea = await tx.tarea.findUnique({ where: { id: tareaId } });
         if (!tarea) throw errorTareaNoEncontrada();
-        await obtenerProyectoAbierto(tx, tarea.proyectoId, { bloquear: true });
 
         const tareasExistentes = await tx.tarea.findMany({
           where: { proyectoId: tarea.proyectoId },

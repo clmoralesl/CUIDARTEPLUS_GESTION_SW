@@ -200,7 +200,11 @@ describe('ProyectosService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             estado: EstadoProyecto.PLANIFICADO,
-            calendario: { create: {} },
+            calendario: expect.objectContaining({
+              create: expect.objectContaining({
+                feriados: expect.any(Object),
+              }),
+            }),
           }),
         }),
       );

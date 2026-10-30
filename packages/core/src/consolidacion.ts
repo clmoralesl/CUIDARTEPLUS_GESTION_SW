@@ -1,4 +1,5 @@
 import { avancePonderado } from './avance';
+import type { CalendarioLaboral } from './calendario';
 import { duracionDelLapso } from './planificacion';
 
 export interface DatosConsolidables {
@@ -21,7 +22,10 @@ const maximo = (valores: (string | null)[]) =>
     .sort()
     .at(-1) ?? null;
 
-export function consolidarArbol<T extends DatosConsolidables>(tareas: readonly T[]): T[] {
+export function consolidarArbol<T extends DatosConsolidables>(
+  tareas: readonly T[],
+  calendario: CalendarioLaboral,
+): T[] {
   const hijos = new Map<number | null, T[]>();
   for (const tarea of tareas) {
     const grupo = hijos.get(tarea.padreId) ?? [];
@@ -43,7 +47,7 @@ export function consolidarArbol<T extends DatosConsolidables>(tareas: readonly T
       finPlan,
       duracionDias:
         inicioPlan && finPlan
-          ? duracionDelLapso(inicioPlan, finPlan)
+          ? duracionDelLapso(inicioPlan, finPlan, calendario)
           : propias.reduce((suma, h) => suma + h.duracionDias, 0),
       inicioReal: minimo(propias.map((h) => h.inicioReal)),
       finReal:

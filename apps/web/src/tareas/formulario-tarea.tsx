@@ -1,16 +1,22 @@
-import { Alert, Button, Group, NumberInput, Stack, Textarea, TextInput } from '@mantine/core';
+import { useMemo } from 'react';
+import { Alert, Button, Group, NumberInput, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import {
   calcularFinPlan,
+  calendarioLaboralDe,
+  esHabil,
   esquemaActualizarTarea,
   esquemaCrearTarea,
+  formatearFecha,
+  siguienteHabil,
   validar,
   type ActualizarTarea,
   type CrearTarea,
   type NivelTarea,
   type TareaArbol,
 } from '@autofix/core';
+import { useCalendario } from '../api/calendario';
 import { useActualizarTarea, useCrearTarea } from '../api/tareas';
 import { cargarErroresServidor } from '../componentes/formularios/validador-formulario';
 
@@ -96,12 +102,25 @@ export function FormularioTarea({
     },
   });
 
+  const { data: calendarioData } = useCalendario(proyectoId);
+  const calendario = useMemo(
+    () => (calendarioData ? calendarioLaboralDe(calendarioData) : null),
+    [calendarioData],
+  );
+
   const estaCargando = crearMutacion.isPending || actualizarMutacion.isPending;
 
   const finPlanCalculado =
-    form.values.inicioPlan && form.values.duracionDias >= 0
-      ? calcularFinPlan(form.values.inicioPlan, form.values.duracionDias)
+    calendario && form.values.inicioPlan && form.values.duracionDias >= 0
+      ? formatearFecha(
+          calcularFinPlan(form.values.inicioPlan, form.values.duracionDias, calendario),
+        )
       : '—';
+
+  const avisoNoHabil =
+    form.values.inicioPlan && calendario && !esHabil(form.values.inicioPlan, calendario)
+      ? `El ${formatearFecha(form.values.inicioPlan)} no es día hábil; la tarea comenzará el ${formatearFecha(siguienteHabil(form.values.inicioPlan, calendario))}.`
+      : null;
 
   const alEnviar = (valores: ValoresFormulario) => {
     if (modo === 'crear') {
@@ -207,7 +226,7 @@ export function FormularioTarea({
           <>
             <Group grow align="flex-start">
               <NumberInput
-                label="Duración (días)"
+                label="Duración (días hábiles)"
                 min={0}
                 max={3650}
                 allowDecimal={false}
@@ -215,19 +234,31 @@ export function FormularioTarea({
                 {...form.getInputProps('duracionDias')}
               />
 
-              <DateInput
-                label="Fecha de inicio plan"
-                placeholder="DD-MM-AAAA"
-                valueFormat="DD-MM-YYYY"
-                clearable
-                value={
-                  form.values.inicioPlan ? new Date(`${form.values.inicioPlan}T00:00:00`) : null
-                }
-                onChange={(val) => form.setFieldValue('inicioPlan', aFechaString(val))}
-                error={form.errors.inicioPlan}
-              />
+              <div>
+                <DateInput
+                  label="Fecha de inicio plan"
+                  placeholder="DD-MM-AAAA"
+                  valueFormat="DD-MM-YYYY"
+                  clearable
+                  value={
+                    form.values.inicioPlan ? new Date(`${form.values.inicioPlan}T00:00:00`) : null
+                  }
+                  onChange={(val) => form.setFieldValue('inicioPlan', aFechaString(val))}
+                  error={form.errors.inicioPlan}
+                />
+                {avisoNoHabil && (
+                  <Text size="xs" c="orange.8" mt={4}>
+                    {avisoNoHabil}
+                  </Text>
+                )}
+              </div>
 
-              <TextInput label="Fin plan (calculado)" value={finPlanCalculado} readOnly disabled />
+              <TextInput
+                label="Fin plan (calculado en días hábiles)"
+                value={finPlanCalculado}
+                readOnly
+                disabled
+              />
             </Group>
 
             <Group grow align="flex-start">

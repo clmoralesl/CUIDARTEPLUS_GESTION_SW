@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { EstructuraApp } from '../diseno/estructura-app';
+import { PaginaCalendario } from '../paginas/pagina-calendario';
 import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
@@ -29,6 +30,10 @@ export const enrutador = createBrowserRouter([
         element: <Navigate to="/proyectos" replace />,
       },
       ...rutasModulos,
+      {
+        path: 'proyectos/:proyectoId/calendario',
+        element: <PaginaCalendario />,
+      },
       {
         path: 'proyectos/:proyectoId',
         element: <PaginaDetalleProyecto />,

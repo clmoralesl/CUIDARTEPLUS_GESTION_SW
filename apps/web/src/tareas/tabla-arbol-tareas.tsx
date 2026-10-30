@@ -41,7 +41,7 @@ export function TablaArbolTareas({
   }
 
   return (
-    <Table.ScrollContainer minWidth={1100}>
+    <Table.ScrollContainer minWidth={1150}>
       <Table verticalSpacing="xs" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
@@ -50,7 +50,7 @@ export function TablaArbolTareas({
             <Table.Th style={{ width: 110 }}>Nivel</Table.Th>
             <Table.Th style={{ width: 110 }}>Inicio plan</Table.Th>
             <Table.Th style={{ width: 110 }}>Fin plan</Table.Th>
-            <Table.Th style={{ width: 90 }}>Duración</Table.Th>
+            <Table.Th style={{ width: 130 }}>Duración (días hábiles)</Table.Th>
             <Table.Th style={{ width: 110 }}>Inicio real</Table.Th>
             <Table.Th style={{ width: 110 }}>Fin real</Table.Th>
             <Table.Th style={{ width: 150 }}>Avance</Table.Th>

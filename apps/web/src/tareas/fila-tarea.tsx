@@ -10,6 +10,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import {
+  formatearDuracion,
   formatearFecha,
   formatearPorcentaje,
   NOMBRES_NIVEL,
@@ -65,7 +66,7 @@ export function FilaTarea({
       );
     }
     return (
-      <Tooltip label="Calculado a partir de sus subtareas">
+      <Tooltip label="Calculado a partir de sus subtareas, en días hábiles">
         <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
           {texto}
         </Text>
@@ -119,9 +120,7 @@ export function FilaTarea({
 
       <Table.Td>{renderDatoCalculado(formatearFecha(tarea.finPlan))}</Table.Td>
 
-      <Table.Td>
-        {renderDatoCalculado(tarea.duracionDias > 0 ? `${tarea.duracionDias} d` : '0 d')}
-      </Table.Td>
+      <Table.Td>{renderDatoCalculado(formatearDuracion(tarea.duracionDias))}</Table.Td>
 
       <Table.Td>{renderDatoCalculado(formatearFecha(tarea.inicioReal))}</Table.Td>
 

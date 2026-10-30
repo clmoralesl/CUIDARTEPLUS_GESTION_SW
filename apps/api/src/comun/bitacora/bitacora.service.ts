@@ -72,4 +72,23 @@ export class BitacoraService {
       },
     });
   }
+
+  async registrarRecalculo(
+    tx: Prisma.TransactionClient,
+    contexto: ContextoBitacora,
+    detalle: Record<string, ValorBitacora>,
+    origen: string,
+  ): Promise<void> {
+    await tx.bitacora.create({
+      data: {
+        proyectoId: contexto.proyectoId,
+        entidad: contexto.entidad,
+        entidadId: contexto.entidadId,
+        rol: ROL_BD[contexto.rol],
+        accion: AccionBitacora.RECALCULAR,
+        valorNuevo: aJson(detalle),
+        origen,
+      },
+    });
+  }
 }

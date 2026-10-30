@@ -1,9 +1,13 @@
 import { EstadoProyecto, NivelTarea, Prisma, PrismaClient } from '@prisma/client';
 import {
+  CALENDARIO_POR_DEFECTO,
   calcularFinPlan,
+  calcularInicioPlan,
   consolidarArbol,
+  crearCalendarioLaboral,
   dateAFechaIso,
   fechaIsoADate,
+  feriadosChileDesde,
   numerarArbol,
   type DatosConsolidables,
 } from '@autofix/core';
@@ -34,6 +38,17 @@ const PROYECTOS_SEMILLA = [
 async function sembrarTareas(proyectoId: number): Promise<void> {
   const conteo = await prisma.tarea.count({ where: { proyectoId } });
   if (conteo > 0) return;
+
+  const calFila = await prisma.calendario.findUnique({
+    where: { proyectoId },
+    include: { feriados: { select: { fecha: true } } },
+  });
+  const calendario = calFila
+    ? crearCalendarioLaboral({
+        diasLaborables: calFila.diasLaborables,
+        feriados: calFila.feriados.map((f) => dateAFechaIso(f.fecha)),
+      })
+    : CALENDARIO_POR_DEFECTO;
 
   const etapa1 = await prisma.tarea.create({
     data: {
@@ -74,7 +89,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       responsable: 'Jefe de Taller',
       duracionDias: 3,
       inicioPlan: fechaIsoADate('2026-11-02'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-02', 3)),
+      finPlan: null,
       inicioReal: fechaIsoADate('2026-11-02'),
       finReal: fechaIsoADate('2026-11-04'),
       porcentajeAvance: new Prisma.Decimal(100),
@@ -92,7 +107,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       responsable: 'Jefe de Taller',
       duracionDias: 4,
       inicioPlan: fechaIsoADate('2026-11-05'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-05', 4)),
+      finPlan: null,
       inicioReal: fechaIsoADate('2026-11-05'),
       finReal: null,
       porcentajeAvance: new Prisma.Decimal(50),
@@ -124,7 +139,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       responsable: 'Desarrollador',
       duracionDias: 5,
       inicioPlan: fechaIsoADate('2026-11-09'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-09', 5)),
+      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -140,7 +155,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       responsable: 'Diseñador UI',
       duracionDias: 4,
       inicioPlan: fechaIsoADate('2026-11-12'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-12', 4)),
+      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -184,7 +199,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       responsable: 'Desarrollador',
       duracionDias: 6,
       inicioPlan: fechaIsoADate('2026-11-16'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-16', 6)),
+      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -199,8 +214,8 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Ingreso y seguimiento de órdenes',
       responsable: 'Desarrollador',
       duracionDias: 8,
-      inicioPlan: fechaIsoADate('2026-11-22'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-22', 8)),
+      inicioPlan: fechaIsoADate('2026-11-24'),
+      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -229,8 +244,8 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Calendario de turnos por mecánico',
       responsable: 'Desarrollador',
       duracionDias: 5,
-      inicioPlan: fechaIsoADate('2026-11-30'),
-      finPlan: fechaIsoADate(calcularFinPlan('2026-11-30', 5)),
+      inicioPlan: fechaIsoADate('2026-12-03'),
+      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -243,10 +258,14 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
 
   const datosConsolidar: DatosConsolidables[] = todas.map((t) => {
     const tieneHijas = padresConHijas.has(t.id);
-    const inicioIso = t.inicioPlan ? dateAFechaIso(t.inicioPlan) : null;
+    const inicioGuardado = t.inicioPlan ? dateAFechaIso(t.inicioPlan) : null;
+    const inicioIso =
+      !tieneHijas && inicioGuardado
+        ? calcularInicioPlan(inicioGuardado, calendario)
+        : inicioGuardado;
     let finIso = t.finPlan ? dateAFechaIso(t.finPlan) : null;
     if (!tieneHijas && inicioIso) {
-      finIso = calcularFinPlan(inicioIso, t.duracionDias);
+      finIso = calcularFinPlan(inicioIso, t.duracionDias, calendario);
     }
     return {
       id: t.id,
@@ -260,7 +279,7 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
     };
   });
 
-  const consolidadas = consolidarArbol(datosConsolidar);
+  const consolidadas = consolidarArbol(datosConsolidar, calendario);
   const mapaConsolidadas = new Map(consolidadas.map((c) => [c.id, c]));
 
   for (const t of todas) {
@@ -293,26 +312,42 @@ async function sembrar(): Promise<void> {
       include: { calendario: true },
     });
 
+    let calendarioId: number;
+
     if (!existente) {
       const creado = await prisma.proyecto.create({
         data: {
           ...datos,
           calendario: { create: {} },
         },
+        include: { calendario: true },
       });
+      calendarioId = creado.calendario!.id;
       if (creado.nombre === 'AutoFix · Implementación') {
         proyectoPrincipalId = creado.id;
       }
     } else {
       if (!existente.calendario) {
-        await prisma.calendario.create({
+        const cal = await prisma.calendario.create({
           data: { proyectoId: existente.id },
         });
+        calendarioId = cal.id;
+      } else {
+        calendarioId = existente.calendario.id;
       }
       if (existente.nombre === 'AutoFix · Implementación') {
         proyectoPrincipalId = existente.id;
       }
     }
+
+    await prisma.feriado.createMany({
+      data: feriadosChileDesde(dateAFechaIso(datos.fechaInicio)).map((f) => ({
+        calendarioId,
+        fecha: fechaIsoADate(f.fecha),
+        descripcion: f.descripcion,
+      })),
+      skipDuplicates: true,
+    });
   }
 
   if (proyectoPrincipalId) {

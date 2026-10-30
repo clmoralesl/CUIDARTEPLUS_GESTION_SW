@@ -3,15 +3,18 @@ import { Prisma, type Tarea } from '@prisma/client';
 import {
   avancePonderado,
   calcularFinPlan,
+  calcularInicioPlan,
   consolidarArbol,
   dateAFechaIso,
   fechaIsoADate,
   numerarArbol,
   ordenarPreorden,
   type ArbolTareas,
+  type CalendarioLaboral,
   type DatosConsolidables,
 } from '@autofix/core';
 import { PrismaService } from '../prisma/prisma.service';
+import { cargarCalendarioLaboral } from '../calendario/calendario-laboral';
 import { aTareaArbol } from './tareas.mapeo';
 
 @Injectable()
@@ -46,12 +49,20 @@ export class ArbolTareasService {
     };
   }
 
-  async reorganizar(tx: Prisma.TransactionClient, proyectoId: number): Promise<ArbolTareas> {
+  async reorganizarConResumen(
+    tx: Prisma.TransactionClient,
+    proyectoId: number,
+    calendarioExistente?: CalendarioLaboral,
+  ): Promise<{ arbol: ArbolTareas; tareasRecalculadas: number }> {
     const tareas = await tx.tarea.findMany({ where: { proyectoId } });
     if (tareas.length === 0) {
-      return { proyectoId, porcentajeAvanceProyecto: 0, tareas: [] };
+      return {
+        arbol: { proyectoId, porcentajeAvanceProyecto: 0, tareas: [] },
+        tareasRecalculadas: 0,
+      };
     }
 
+    const calendario = calendarioExistente ?? (await cargarCalendarioLaboral(tx, proyectoId));
     const padresConHijas = new Set(
       tareas.map((t) => t.padreId).filter((id): id is number => id !== null),
     );
@@ -59,12 +70,16 @@ export class ArbolTareasService {
 
     const datosParaConsolidar: DatosConsolidables[] = tareas.map((t) => {
       const tieneHijas = padresConHijas.has(t.id);
-      const inicioIso = t.inicioPlan ? dateAFechaIso(t.inicioPlan) : null;
+      const inicioGuardado = t.inicioPlan ? dateAFechaIso(t.inicioPlan) : null;
+      const inicioIso =
+        !tieneHijas && inicioGuardado
+          ? calcularInicioPlan(inicioGuardado, calendario)
+          : inicioGuardado;
       const finGuardado = t.finPlan ? dateAFechaIso(t.finPlan) : null;
       const finIso = tieneHijas
         ? finGuardado
         : inicioIso
-          ? calcularFinPlan(inicioIso, t.duracionDias)
+          ? calcularFinPlan(inicioIso, t.duracionDias, calendario)
           : null;
       return {
         id: t.id,
@@ -78,7 +93,7 @@ export class ArbolTareasService {
       };
     });
 
-    const consolidadas = consolidarArbol(datosParaConsolidar);
+    const consolidadas = consolidarArbol(datosParaConsolidar, calendario);
     const mapaConsolidadas = new Map(consolidadas.map((c) => [c.id, c]));
 
     const filasQueCambian: { id: number; datos: Prisma.TareaUpdateInput }[] = [];
@@ -186,9 +201,21 @@ export class ArbolTareasService {
     );
 
     return {
-      proyectoId,
-      porcentajeAvanceProyecto,
-      tareas: ordenadas.map((t) => aTareaArbol(t, padresConHijas.has(t.id))),
+      arbol: {
+        proyectoId,
+        porcentajeAvanceProyecto,
+        tareas: ordenadas.map((t) => aTareaArbol(t, padresConHijas.has(t.id))),
+      },
+      tareasRecalculadas: filasQueCambian.length,
     };
+  }
+
+  async reorganizar(
+    tx: Prisma.TransactionClient,
+    proyectoId: number,
+    calendario?: CalendarioLaboral,
+  ): Promise<ArbolTareas> {
+    const resultado = await this.reorganizarConResumen(tx, proyectoId, calendario);
+    return resultado.arbol;
   }
 }

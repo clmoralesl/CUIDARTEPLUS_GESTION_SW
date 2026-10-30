@@ -7,6 +7,7 @@ import {
   dateAFechaIso,
   fechasEnOrden,
   fechaIsoADate,
+  feriadosChileDesde,
   MENSAJE_FECHAS,
   NOMBRES_ESTADO_PROYECTO,
   puedeTransicionar,
@@ -98,7 +99,16 @@ export class ProyectosService {
           fechaInicio: fechaIsoADate(datos.fechaInicio),
           fechaFin: datos.fechaFin ? fechaIsoADate(datos.fechaFin) : null,
           estado: EstadoProyecto.PLANIFICADO,
-          calendario: { create: {} },
+          calendario: {
+            create: {
+              feriados: {
+                create: feriadosChileDesde(datos.fechaInicio).map((f) => ({
+                  fecha: fechaIsoADate(f.fecha),
+                  descripcion: f.descripcion,
+                })),
+              },
+            },
+          },
         },
       });
 
