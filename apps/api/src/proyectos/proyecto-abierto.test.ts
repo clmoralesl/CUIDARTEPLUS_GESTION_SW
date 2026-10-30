@@ -66,4 +66,31 @@ describe('obtenerProyectoAbierto', () => {
       codigo: 'PROYECTO_CERRADO',
     });
   });
+
+  it('ejecuta consulta FOR UPDATE cuando bloquear es true', async () => {
+    const proyectoMock: Proyecto = {
+      id: 3,
+      nombre: 'Proyecto Para Bloquear',
+      descripcion: null,
+      responsable: 'JP',
+      presupuesto: new Prisma.Decimal(100),
+      fechaInicio: new Date('2026-11-02T00:00:00.000Z'),
+      fechaFin: null,
+      estado: EstadoProyecto.PLANIFICADO,
+      creadoEn: new Date(),
+      actualizadoEn: new Date(),
+    };
+
+    const queryRawMock = vi.fn().mockResolvedValue([]);
+    const txMock = {
+      $queryRaw: queryRawMock,
+      proyecto: {
+        findUnique: vi.fn().mockResolvedValue(proyectoMock),
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    const res = await obtenerProyectoAbierto(txMock, 3, { bloquear: true });
+    expect(res).toBe(proyectoMock);
+    expect(queryRawMock).toHaveBeenCalledTimes(1);
+  });
 });

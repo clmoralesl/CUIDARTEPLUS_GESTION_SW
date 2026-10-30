@@ -3,10 +3,12 @@ process.env.TZ = 'America/Santiago';
 import { describe, expect, it } from 'vitest';
 import {
   dateAFechaIso,
+  diasCorridosEntre,
   esFechaIsoValida,
   esquemaFechaIso,
   fechaIsoADate,
   fechaLocalIso,
+  sumarDiasCorridos,
 } from './fechas';
 import { validar } from './validacion';
 
@@ -45,5 +47,14 @@ describe('fechas', () => {
     const fechaNoche = new Date(2026, 9, 29, 22, 0, 0);
     expect(fechaLocalIso(fechaNoche)).toBe('2026-10-29');
     expect(fechaNoche.toISOString().startsWith('2026-10-30')).toBe(true);
+  });
+
+  it('suma dias corridos y calcula dias entre fechas en UTC', () => {
+    expect(sumarDiasCorridos('2026-11-02', 0)).toBe('2026-11-02');
+    expect(sumarDiasCorridos('2026-11-02', 3)).toBe('2026-11-05');
+    expect(sumarDiasCorridos('2026-11-02', -2)).toBe('2026-10-31');
+    expect(diasCorridosEntre('2026-11-02', '2026-11-05')).toBe(3);
+    expect(diasCorridosEntre('2026-11-02', '2026-11-02')).toBe(0);
+    expect(diasCorridosEntre('2026-11-05', '2026-11-02')).toBe(-3);
   });
 });

@@ -1,4 +1,4 @@
-import { createTheme, MantineColorsTuple } from '@mantine/core';
+import { Badge, createTheme, MantineColorsTuple } from '@mantine/core';
 
 const petroleo: MantineColorsTuple = [
   '#e6f4f5',
@@ -20,6 +20,9 @@ export const tema = createTheme({
   fontFamily: "'Inter Variable', system-ui, sans-serif",
   headings: { fontFamily: "'Inter Variable', system-ui, sans-serif" },
   defaultRadius: 'sm',
+  components: {
+    Badge: Badge.extend({ styles: { root: { minWidth: 'max-content' } } }),
+  },
 });
 
 export const CLAVE_ESQUEMA_COLOR = 'autofix:esquema-color';

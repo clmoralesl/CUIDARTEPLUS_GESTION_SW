@@ -45,7 +45,28 @@ Al operar exclusivamente en un entorno local aislado con Docker, no existe un mo
 | `POST`  | `/proyectos/:proyectoId/iniciar` | JP      | `200`  | Transición a EN_CURSO                         | `403`, `404`, `409 TRANSICION_INVALIDA`     |
 | `POST`  | `/proyectos/:proyectoId/cerrar`  | JP      | `200`  | Transición a CERRADO                          | `403`, `404`, `409 TRANSICION_INVALIDA`     |
 
-### Reglas de validación y ciclo de vida
+---
+
+## 4. Endpoints del módulo de tareas (árbol de trabajo)
+
+| Método   | Ruta                            | Rol     | Código | Descripción                                     | Errores específicos                                                   |
+| -------- | ------------------------------- | ------- | ------ | ----------------------------------------------- | --------------------------------------------------------------------- |
+| `GET`    | `/proyectos/:proyectoId/tareas` | JP y CC | `200`  | Árbol completo de tareas en preorden            | `400` id inválido, `404` proyecto no encontrado                       |
+| `POST`   | `/proyectos/:proyectoId/tareas` | JP      | `201`  | Creación de tarea y reorganización del árbol    | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
+| `PATCH`  | `/tareas/:tareaId`              | JP      | `200`  | Edición parcial de campos editables             | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 CAMPO_CALCULADO`    |
+| `POST`   | `/tareas/:tareaId/mover`        | JP      | `200`  | Reubicación o reordenamiento entre hermanas     | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
+| `DELETE` | `/tareas/:tareaId`              | JP      | `200`  | Eliminación en cascada de tarea y descendientes | `400`, `403`, `404`, `409 PROYECTO_CERRADO`                           |
+
+### Reglas de jerarquía, consolidación y concurrencia
+
+1. **Jerarquía estricta**: Los tres niveles (`ETAPA`, `ACTIVIDAD`, `SUBACTIVIDAD`) deben respetar su relación padre permitida: `ETAPA` solo con padre `null`, `ACTIVIDAD` solo bajo `ETAPA`, y `SUBACTIVIDAD` solo bajo `ACTIVIDAD`. Cualquier otra combinación responde `422 JERARQUIA_INVALIDA`.
+2. **Renumeración en dos fases**: Al alterar la estructura (crear, mover o eliminar), los códigos (`1`, `1.1`, `1.1.1`) se renumeran en dos fases dentro de la misma transacción (asignando primero un código temporal `~id` a las filas que cambian de código), evitando colisiones con el índice único `unique(proyectoId, codigo)`.
+3. **Consolidación persistida**: En las tareas contenedoras (con hijas), `inicioPlan`, `finPlan`, `duracionDias`, `inicioReal`, `finReal` y `porcentajeAvance` se calculan y persisten automáticamente. Cualquier intento de editar estos campos directamente en una tarea con hijas responde `422 CAMPO_CALCULADO`.
+4. **Bloqueo pesimista por proyecto**: Toda mutación sobre el árbol ejecuta `SELECT id FROM proyectos WHERE id = :id FOR UPDATE` al inicio de la transacción, serializando escrituras concurrentes y evitando carreras frente al cierre del proyecto.
+
+---
+
+## 5. Reglas de validación y ciclo de vida
 
 1. **Orden de comprobación**: Las validaciones de esquema sintáctico y tipado (código HTTP `400`) se evalúan antes de las reglas de negocio o estado en base de datos (`409`). Si un cuerpo incluye campos desconocidos o no permitidos (como intentar enviar `estado` vía `PATCH`), el servidor responde `400 VALIDACION_FALLIDA` inmediatamente.
 2. **Esquemas estrictos**: Se aplica `.strict()` en Zod para prevenir la asignación masiva (_mass assignment_). Los estados solo pueden alterarse mediante sus respectivas rutas de acción (`/iniciar` y `/cerrar`).
@@ -132,6 +153,8 @@ Todas las respuestas con código HTTP 4xx o 5xx (excepto la sonda `/salud`) devu
 | 409    | `TRANSICION_INVALIDA`        | Conflicto                  | Transición de estado no admitida por la máquina de estados          |
 | 409    | `CONFLICTO`                  | Conflicto                  | Conflicto de concurrencia optimista (`P2034`)                       |
 | 413    | `CONTENIDO_DEMASIADO_GRANDE` | Contenido demasiado grande | Carga útil mayor al límite del analizador                           |
+| 422    | `JERARQUIA_INVALIDA`         | Operación no permitida     | Incoherencia en relación jerárquica nivel/padre                     |
+| 422    | `CAMPO_CALCULADO`            | Operación no permitida     | Intento de edición de campos calculados en tarea con subtareas      |
 | 500    | `ERROR_INTERNO`              | Error interno              | Excepción interna no controlada                                     |
 | 503    | `BD_NO_DISPONIBLE`           | Servicio no disponible     | Conexión con PostgreSQL no establecida                              |
 | 0      | `SIN_CONEXION`               | Sin conexión               | Cliente web sin conectividad con API                                |

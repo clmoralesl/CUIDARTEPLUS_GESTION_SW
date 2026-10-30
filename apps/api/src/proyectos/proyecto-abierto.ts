@@ -15,7 +15,11 @@ export const errorProyectoCerrado = () =>
 export async function obtenerProyectoAbierto(
   tx: Prisma.TransactionClient,
   proyectoId: number,
+  opciones: { bloquear?: boolean } = {},
 ): Promise<Proyecto> {
+  if (opciones.bloquear) {
+    await tx.$queryRaw`SELECT id FROM proyectos WHERE id = ${proyectoId} FOR UPDATE`;
+  }
   const proyecto = await tx.proyecto.findUnique({ where: { id: proyectoId } });
   if (!proyecto) throw errorProyectoNoEncontrado();
   if (proyecto.estado === EstadoProyecto.CERRADO) throw errorProyectoCerrado();

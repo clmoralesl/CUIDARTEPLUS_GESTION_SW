@@ -137,7 +137,9 @@ export function PaginaProyectos() {
                         {NOMBRES_ESTADO_PROYECTO[proyecto.estado] ?? proyecto.estado}
                       </Badge>
                     </Table.Td>
-                    <Table.Td>{formatearMonto(proyecto.presupuesto)}</Table.Td>
+                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                      {formatearMonto(proyecto.presupuesto)}
+                    </Table.Td>
                     <Table.Td>
                       <Stack gap={4}>
                         <Text size="xs" ta="right">
@@ -146,8 +148,12 @@ export function PaginaProyectos() {
                         <Progress value={proyecto.porcentajeAvance} size="sm" color="teal" />
                       </Stack>
                     </Table.Td>
-                    <Table.Td>{formatearFecha(proyecto.fechaInicio)}</Table.Td>
-                    <Table.Td>{formatearFecha(proyecto.fechaFin)}</Table.Td>
+                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                      {formatearFecha(proyecto.fechaInicio)}
+                    </Table.Td>
+                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                      {formatearFecha(proyecto.fechaFin)}
+                    </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>

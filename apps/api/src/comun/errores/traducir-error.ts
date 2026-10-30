@@ -14,6 +14,7 @@ const TITULOS: Record<number, string> = {
   404: 'No encontrado',
   409: 'Conflicto',
   413: 'Contenido demasiado grande',
+  422: 'Operación no permitida',
   500: 'Error interno',
   503: 'Servicio no disponible',
 };
