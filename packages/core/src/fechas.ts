@@ -25,3 +25,17 @@ export function fechaLocalIso(fecha: Date = new Date()): string {
   const dia = String(fecha.getDate()).padStart(2, '0');
   return `${fecha.getFullYear()}-${mes}-${dia}`;
 }
+
+const MILISEGUNDOS_DIA = 86_400_000;
+
+export function sumarDiasCorridos(fechaIso: string, dias: number): string {
+  const fecha = fechaIsoADate(fechaIso);
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+  return dateAFechaIso(fecha);
+}
+
+export function diasCorridosEntre(inicioIso: string, finIso: string): number {
+  return Math.round(
+    (fechaIsoADate(finIso).getTime() - fechaIsoADate(inicioIso).getTime()) / MILISEGUNDOS_DIA,
+  );
+}

@@ -6,7 +6,7 @@ export interface Modulo {
 
 export const MODULOS: Modulo[] = [
   { ruta: 'proyectos', titulo: 'Proyectos', disponible: true },
-  { ruta: 'tareas', titulo: 'Tareas', disponible: false },
+  { ruta: 'tareas', titulo: 'Tareas', disponible: true },
   { ruta: 'gantt', titulo: 'Gantt', disponible: false },
   { ruta: 'recursos', titulo: 'Recursos', disponible: false },
   { ruta: 'hitos', titulo: 'Hitos', disponible: false },

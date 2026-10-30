@@ -1,6 +1,5 @@
 import { esquemaFechaIso } from './fechas';
-import { redondearMonto } from './montos';
-import { z } from './validacion';
+import { tieneMaximoDecimales, z } from './validacion';
 
 export const ESTADOS_PROYECTO = ['PLANIFICADO', 'EN_CURSO', 'CERRADO'] as const;
 export type EstadoProyecto = (typeof ESTADOS_PROYECTO)[number];
@@ -44,7 +43,7 @@ const camposProyecto = {
     .number({ error: 'Ingrese el presupuesto.' })
     .min(0, 'El presupuesto no puede ser negativo.')
     .max(PRESUPUESTO_MAXIMO, 'El presupuesto supera el máximo permitido.')
-    .refine((valor) => redondearMonto(valor) === valor, 'Use como máximo 2 decimales.'),
+    .refine((valor) => tieneMaximoDecimales(valor, 2), 'Use como máximo 2 decimales.'),
   fechaInicio: esquemaFechaIso,
   fechaFin: esquemaFechaIso.nullable().optional(),
 };

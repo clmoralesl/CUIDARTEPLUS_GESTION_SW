@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-export type ValorBitacora = string | number | boolean | null;
+export type ValorBitacora = string | number | boolean | null | Record<string, unknown>;
 
 export interface CambioCampo {
   campo: string;
@@ -14,6 +14,9 @@ export function normalizarValor(valor: unknown): ValorBitacora {
   if (Prisma.Decimal.isDecimal(valor)) return Number(valor);
   if (typeof valor === 'string' || typeof valor === 'number' || typeof valor === 'boolean') {
     return valor;
+  }
+  if (typeof valor === 'object') {
+    return valor as Record<string, unknown>;
   }
   return String(valor);
 }

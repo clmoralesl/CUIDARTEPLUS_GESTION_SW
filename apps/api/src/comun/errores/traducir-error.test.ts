@@ -14,6 +14,18 @@ describe('traducirError', () => {
     expect(resultado.cuerpo.error).toBe('Solicitud inválida');
   });
 
+  it('traduce ExcepcionApi 422 con titulo Operacion no permitida', () => {
+    const excepcion = new ExcepcionApi(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'JERARQUIA_INVALIDA',
+      'Jerarquia invalida',
+    );
+    const resultado = traducirError(excepcion);
+    expect(resultado.estado).toBe(422);
+    expect(resultado.cuerpo.codigo).toBe('JERARQUIA_INVALIDA');
+    expect(resultado.cuerpo.error).toBe('Operación no permitida');
+  });
+
   it('traduce Prisma P2002 a 409 REGISTRO_DUPLICADO con campos', () => {
     const errorPrisma = new Prisma.PrismaClientKnownRequestError('duplicado', {
       code: 'P2002',

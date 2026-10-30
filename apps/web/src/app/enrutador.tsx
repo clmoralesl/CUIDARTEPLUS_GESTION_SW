@@ -4,11 +4,19 @@ import { PaginaDetalleProyecto } from '../paginas/pagina-detalle-proyecto';
 import { PaginaNoEncontrada } from '../paginas/pagina-no-encontrada';
 import { PaginaProyectos } from '../paginas/pagina-proyectos';
 import { PaginaProximamente } from '../paginas/pagina-proximamente';
+import { PaginaTareas } from '../paginas/pagina-tareas';
 import { MODULOS } from './modulos';
 
 const rutasModulos = MODULOS.map((m) => ({
   path: m.ruta,
-  element: m.ruta === 'proyectos' ? <PaginaProyectos /> : <PaginaProximamente titulo={m.titulo} />,
+  element:
+    m.ruta === 'proyectos' ? (
+      <PaginaProyectos />
+    ) : m.ruta === 'tareas' ? (
+      <PaginaTareas />
+    ) : (
+      <PaginaProximamente titulo={m.titulo} />
+    ),
 }));
 
 export const enrutador = createBrowserRouter([

@@ -1,8 +1,13 @@
 import { z } from 'zod';
+import { redondear } from './numeros';
 
 z.config(z.locales.es());
 
 export { z };
+
+export function tieneMaximoDecimales(valor: number, decimales: number): boolean {
+  return redondear(valor, decimales) === valor;
+}
 
 export type Esquema<T> = z.ZodType<T>;
 

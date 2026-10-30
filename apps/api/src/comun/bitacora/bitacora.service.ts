@@ -55,4 +55,21 @@ export class BitacoraService {
       },
     });
   }
+
+  async registrarEliminacion(
+    tx: Prisma.TransactionClient,
+    contexto: ContextoBitacora,
+    instantanea: Record<string, ValorBitacora>,
+  ): Promise<void> {
+    await tx.bitacora.create({
+      data: {
+        proyectoId: contexto.proyectoId,
+        entidad: contexto.entidad,
+        entidadId: contexto.entidadId,
+        rol: ROL_BD[contexto.rol],
+        accion: AccionBitacora.ELIMINAR,
+        valorAnterior: aJson(instantanea),
+      },
+    });
+  }
 }

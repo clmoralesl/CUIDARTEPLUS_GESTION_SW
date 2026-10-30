@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CLAVE_ROL } from '../sesion/almacenamiento';
 import { ProveedorSesion } from '../sesion/proveedor-sesion';
-import { BotonProtegido } from './boton-protegido';
+import { AccionProtegida, BotonProtegido } from './boton-protegido';
 
 function renderConSesion(ui: React.ReactElement, rol: string) {
   localStorage.setItem(CLAVE_ROL, rol);
@@ -85,5 +85,33 @@ describe('BotonProtegido', () => {
     expect(boton).toHaveAttribute('aria-disabled', 'true');
     await userEvent.hover(boton);
     expect(await screen.findByText('Solo Jefe de Proyecto')).toBeInTheDocument();
+  });
+
+  describe('AccionProtegida', () => {
+    it('encuentra el boton con getByRole por nombre accesible con rol JP y con rol CC', () => {
+      const { unmount } = renderConSesion(
+        <AccionProtegida permiso="editarPlanificacion" tooltip="Editar" onClick={vi.fn()}>
+          <span>icono</span>
+        </AccionProtegida>,
+        'JP',
+      );
+
+      const botonHabilitado = screen.getByRole('button', { name: /Editar/ });
+      expect(botonHabilitado).not.toHaveAttribute('aria-disabled');
+      expect(botonHabilitado).toHaveAttribute('aria-label', 'Editar');
+
+      unmount();
+
+      renderConSesion(
+        <AccionProtegida permiso="editarPlanificacion" tooltip="Editar" onClick={vi.fn()}>
+          <span>icono</span>
+        </AccionProtegida>,
+        'CC',
+      );
+
+      const botonBloqueado = screen.getByRole('button', { name: /Editar/ });
+      expect(botonBloqueado).toHaveAttribute('aria-disabled', 'true');
+      expect(botonBloqueado).toHaveAttribute('aria-label', 'Editar (Solo Jefe de Proyecto)');
+    });
   });
 });
