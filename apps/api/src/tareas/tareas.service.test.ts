@@ -43,6 +43,7 @@ describe('TareasService', () => {
   it('lanza 422 JERARQUIA_INVALIDA si se intenta crear una actividad sin padre o con padre de nivel incorrecto', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -79,6 +80,7 @@ describe('TareasService', () => {
   it('lanza 422 JERARQUIA_INVALIDA si una etapa se intenta crear con padreId', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -115,6 +117,7 @@ describe('TareasService', () => {
   it('lanza 422 CAMPO_CALCULADO al intentar editar campos calculados en una tarea con hijas', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -141,6 +144,7 @@ describe('TareasService', () => {
   it('lanza 400 VALIDACION_FALLIDA al ingresar finReal sin inicioReal', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -167,6 +171,7 @@ describe('TareasService', () => {
   it('retorna el arbol sin escribir en base de datos si se mueve a la misma ubicacion', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -207,6 +212,7 @@ describe('TareasService', () => {
   it('lanza 422 JERARQUIA_INVALIDA si se intenta mover una etapa bajo una actividad', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -242,6 +248,7 @@ describe('TareasService', () => {
         ordenEjecucion.push('bloqueo');
         return Promise.resolve([]);
       }),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       proyecto: {
         findUnique: vi.fn().mockImplementation(() => {
           ordenEjecucion.push('verificarProyecto');
@@ -281,6 +288,12 @@ describe('TareasService', () => {
 
     await servicio.eliminar(10, 'JP');
 
-    expect(ordenEjecucion).toEqual(['buscarTarea', 'bloqueo', 'verificarProyecto', 'borrarTarea']);
+    expect(ordenEjecucion).toEqual([
+      'buscarTarea',
+      'bloqueo',
+      'verificarProyecto',
+      'buscarTarea',
+      'borrarTarea',
+    ]);
   });
 });

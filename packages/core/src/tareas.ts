@@ -81,10 +81,10 @@ export const esquemaCrearTarea = z
     descripcion: textoOpcional(2000),
     responsable: textoOpcional(120),
     duracionDias: z
-      .number({ error: 'Ingrese la duración en días.' })
+      .number({ error: 'Ingrese la duración en días hábiles.' })
       .int('La duración debe ser un número entero.')
       .min(0, 'La duración no puede ser negativa.')
-      .max(3650, 'La duración no puede superar 3650 días.')
+      .max(3650, 'La duración no puede superar 3650 días hábiles.')
       .default(1),
     inicioPlan: esquemaFechaIso.nullable().optional(),
     posicion: z
@@ -103,10 +103,10 @@ export const esquemaActualizarTarea = z
     descripcion: textoOpcional(2000),
     responsable: textoOpcional(120),
     duracionDias: z
-      .number({ error: 'Ingrese la duración en días.' })
+      .number({ error: 'Ingrese la duración en días hábiles.' })
       .int('La duración debe ser un número entero.')
       .min(0, 'La duración no puede ser negativa.')
-      .max(3650, 'La duración no puede superar 3650 días.'),
+      .max(3650, 'La duración no puede superar 3650 días hábiles.'),
     inicioPlan: esquemaFechaIso.nullable(),
     inicioReal: esquemaFechaIso.nullable(),
     finReal: esquemaFechaIso.nullable(),

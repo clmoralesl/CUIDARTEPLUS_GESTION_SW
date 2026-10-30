@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CALENDARIO_POR_DEFECTO, crearCalendarioLaboral } from './calendario';
 import { consolidarArbol, type DatosConsolidables } from './consolidacion';
 
 describe('consolidacion', () => {
@@ -46,7 +47,7 @@ describe('consolidacion', () => {
       },
     ];
 
-    const consolidadas = consolidarArbol(tareas);
+    const consolidadas = consolidarArbol(tareas, CALENDARIO_POR_DEFECTO);
     const act = consolidadas.find((t) => t.id === 11);
     const etapa = consolidadas.find((t) => t.id === 1);
 
@@ -99,7 +100,7 @@ describe('consolidacion', () => {
       },
     ];
 
-    const consolidadas = consolidarArbol(tareas);
+    const consolidadas = consolidarArbol(tareas, CALENDARIO_POR_DEFECTO);
     const etapa = consolidadas.find((t) => t.id === 1);
     expect(etapa?.inicioReal).toBe('2026-11-02');
     expect(etapa?.finReal).toBe('2026-11-07');
@@ -140,7 +141,7 @@ describe('consolidacion', () => {
       },
     ];
 
-    const consolidadas = consolidarArbol(tareas);
+    const consolidadas = consolidarArbol(tareas, CALENDARIO_POR_DEFECTO);
     const etapa = consolidadas.find((t) => t.id === 1);
     expect(etapa?.inicioPlan).toBeNull();
     expect(etapa?.finPlan).toBeNull();
@@ -182,7 +183,7 @@ describe('consolidacion', () => {
       },
     ];
 
-    const consolidadas = consolidarArbol(tareas);
+    const consolidadas = consolidarArbol(tareas, CALENDARIO_POR_DEFECTO);
     const etapa = consolidadas.find((t) => t.id === 1);
     expect(etapa?.porcentajeAvance).toBe(75);
     expect(etapa?.duracionDias).toBe(1);
@@ -202,7 +203,55 @@ describe('consolidacion', () => {
       },
     ];
 
-    const consolidadas = consolidarArbol(tareas);
+    const consolidadas = consolidarArbol(tareas, CALENDARIO_POR_DEFECTO);
     expect(consolidadas[0]).toEqual(tareas[0]);
+  });
+
+  it('consolida padre cuyas hijas cruzan un fin de semana y un feriado', () => {
+    const calendarioConFeriado = crearCalendarioLaboral({
+      diasLaborables: [1, 2, 3, 4, 5],
+      feriados: ['2026-12-08'],
+    });
+
+    const tareas: DatosConsolidables[] = [
+      {
+        id: 1,
+        padreId: null,
+        duracionDias: 0,
+        inicioPlan: null,
+        finPlan: null,
+        inicioReal: null,
+        finReal: null,
+        porcentajeAvance: 0,
+      },
+      {
+        id: 11,
+        padreId: 1,
+        duracionDias: 2,
+        inicioPlan: '2026-12-04',
+        finPlan: '2026-12-07',
+        inicioReal: null,
+        finReal: null,
+        porcentajeAvance: 100,
+      },
+      {
+        id: 12,
+        padreId: 1,
+        duracionDias: 2,
+        inicioPlan: '2026-12-09',
+        finPlan: '2026-12-10',
+        inicioReal: null,
+        finReal: null,
+        porcentajeAvance: 50,
+      },
+    ];
+
+    const consolidadas = consolidarArbol(tareas, calendarioConFeriado);
+    const padre = consolidadas.find((t) => t.id === 1);
+
+    expect(padre?.inicioPlan).toBe('2026-12-04');
+    expect(padre?.finPlan).toBe('2026-12-10');
+    expect(padre?.duracionDias).toBe(4);
+    expect(padre?.porcentajeAvance).toBe(75);
   });
 });

@@ -131,6 +131,14 @@ export function PaginaDetalleProyecto() {
         </div>
 
         <Group gap="sm">
+          <Button
+            variant="default"
+            leftSection={<IconCalendar size={16} />}
+            onClick={() => navigate(`/proyectos/${proyecto.id}/calendario`)}
+          >
+            Calendario laboral
+          </Button>
+
           <BotonProtegido
             permiso="editarPlanificacion"
             estadoProyecto={proyecto.estado}

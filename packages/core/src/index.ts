@@ -13,6 +13,8 @@ export * from './montos';
 export * from './avance';
 export * from './texto';
 export * from './proyectos';
+export * from './calendario';
+export * from './feriados-chile';
 export * from './planificacion';
 export * from './arbol';
 export * from './consolidacion';

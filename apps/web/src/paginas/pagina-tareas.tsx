@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
   Alert,
+  Anchor,
   Badge,
   Card,
   Center,
@@ -20,6 +22,7 @@ import {
   type NivelTarea,
   type TareaArbol,
 } from '@autofix/core';
+import { useCalendario } from '../api/calendario';
 import { useProyecto } from '../api/proyectos';
 import { useArbolTareas, useEliminarTarea, useMoverTarea } from '../api/tareas';
 import { BotonProtegido } from '../componentes/boton-protegido';
@@ -34,6 +37,7 @@ export function PaginaTareas() {
 
   const { data: proyecto, isLoading: cargandoProyecto } = useProyecto(proyectoActivoId ?? 0);
   const { data: arbol, isLoading: cargandoArbol } = useArbolTareas(proyectoActivoId);
+  const { data: calendario } = useCalendario(proyectoActivoId);
 
   const moverMutacion = useMoverTarea(proyectoActivoId ?? 0);
   const eliminarMutacion = useEliminarTarea(proyectoActivoId ?? 0);
@@ -196,6 +200,18 @@ export function PaginaTareas() {
             <Badge size="lg" variant="light" color="blue">
               Avance: {formatearPorcentaje(porcentajeAvance)}
             </Badge>
+            {proyectoActivoId && (
+              <Anchor
+                component={Link}
+                to={`/proyectos/${proyectoActivoId}/calendario`}
+                size="sm"
+                c="dimmed"
+              >
+                {calendario
+                  ? `Calendario: ${calendario.diasLaborables.join(',') === '1,2,3,4,5' ? 'lunes a viernes' : `${calendario.diasLaborables.length} días laborables`}, ${calendario.feriados.length} feriados`
+                  : 'Calendario laboral'}
+              </Anchor>
+            )}
           </Group>
 
           <BotonProtegido

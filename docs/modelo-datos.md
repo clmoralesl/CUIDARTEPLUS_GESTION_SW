@@ -370,6 +370,8 @@ erDiagram
 | `dias_laborables` | Int[]   | sí          |                        | con valor por defecto     |
 | `horas_por_dia`   | Decimal | sí          |                        | con valor por defecto     |
 
+Convención de días: `0 = domingo`, `1 = lunes`, `2 = martes`, `3 = miércoles`, `4 = jueves`, `5 = viernes`, `6 = sábado` (convención estándar de `getUTCDay()` y `EXTRACT(DOW ...)` de PostgreSQL). El valor por defecto `[1, 2, 3, 4, 5]` corresponde a lunes a viernes. La duración de tareas (`duracion_dias`) se expresa y cuenta en días hábiles conforme al calendario del proyecto.
+
 ### Feriado · `feriados`
 
 | Columna         | Tipo     | Obligatorio | Referencia (al borrar) | Restricciones             |
@@ -380,6 +382,8 @@ erDiagram
 | `descripcion`   | String   | sí          |                        |                           |
 
 Únicos compuestos: `(calendarioId, fecha)`.
+
+Los feriados precargados se obtienen de la constante `FERIADOS_CHILE` en `packages/core` para el período 2026-2030 (83 feriados nacionales). Los años 2028 a 2030 corresponden a proyecciones basadas en la legislación vigente y están sujetos a los decretos anuales de solsticio y reformas legales. No se incluyen feriados por elecciones ni feriados regionales. Al crear un proyecto, este se inicializa con los feriados cuya fecha sea igual o posterior a su fecha de inicio.
 
 ### Tarea · `tareas`
 

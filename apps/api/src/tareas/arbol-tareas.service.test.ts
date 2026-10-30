@@ -62,6 +62,7 @@ describe('ArbolTareasService', () => {
     const ordenLlamadas: string[] = [];
 
     const txMock = {
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       tarea: {
         findMany: vi.fn().mockResolvedValue([tarea1, tarea2]),
         update: vi.fn().mockImplementation(({ where, data }) => {
@@ -119,6 +120,7 @@ describe('ArbolTareasService', () => {
     };
 
     const txMock = {
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       tarea: {
         findMany: vi.fn().mockResolvedValue([tarea1]),
         update: vi.fn(),
@@ -192,6 +194,7 @@ describe('ArbolTareasService', () => {
     const updates: { id: number; data: Prisma.TareaUpdateInput }[] = [];
 
     const txMock = {
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
       tarea: {
         findMany: vi.fn().mockResolvedValue([etapa, hoja]),
         update: vi.fn().mockImplementation(({ where, data }) => {
@@ -218,5 +221,58 @@ describe('ArbolTareasService', () => {
     expect(etapaResultado?.inicioPlan).toBeNull();
     expect(etapaResultado?.finPlan).toBeNull();
     expect(etapaResultado?.duracionDias).toBe(5);
+  });
+
+  it('recalcula finPlan de hoja considerando feriados configurados en el calendario', async () => {
+    const hoja: Tarea = {
+      id: 1,
+      proyectoId: 1,
+      padreId: null,
+      nivel: NivelTarea.ETAPA,
+      codigo: '1',
+      orden: 1,
+      nombre: 'Etapa 1',
+      descripcion: null,
+      responsable: null,
+      duracionDias: 4,
+      inicioPlan: new Date('2026-11-05T00:00:00.000Z'),
+      finPlan: new Date('2026-11-10T00:00:00.000Z'),
+      inicioReal: null,
+      finReal: null,
+      fechaFija: null,
+      porcentajeAvance: new Prisma.Decimal(0),
+      inicioTardio: null,
+      finTardio: null,
+      holguraDias: null,
+      esCritica: false,
+      costoPlan: new Prisma.Decimal(0),
+      costoReal: new Prisma.Decimal(0),
+      creadoEn: new Date(),
+      actualizadoEn: new Date(),
+    };
+
+    const txMock = {
+      calendario: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 1,
+          proyectoId: 1,
+          diasLaborables: [1, 2, 3, 4, 5],
+          horasPorDia: new Prisma.Decimal(8),
+          feriados: [{ fecha: new Date('2026-11-10T00:00:00.000Z') }],
+        }),
+      },
+      tarea: {
+        findMany: vi.fn().mockResolvedValue([hoja]),
+        update: vi.fn().mockResolvedValue(hoja),
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    const prismaMock = {} as PrismaService;
+    const servicio = new ArbolTareasService(prismaMock);
+
+    const resultado = await servicio.reorganizar(txMock, 1);
+    const tareaResultado = resultado.tareas.find((t) => t.id === 1);
+
+    expect(tareaResultado?.finPlan).toBe('2026-11-11');
   });
 });

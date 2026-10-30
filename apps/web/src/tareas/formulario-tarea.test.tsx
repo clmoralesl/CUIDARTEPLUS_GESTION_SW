@@ -48,7 +48,7 @@ describe('FormularioTarea', () => {
     expect(screen.getByLabelText(/Responsable/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Descripción/i)).toBeInTheDocument();
 
-    expect(screen.queryByLabelText(/Duración \(días\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Duración \(días hábiles\)/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Fecha de inicio plan/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Porcentaje de avance/i)).not.toBeInTheDocument();
   });
@@ -76,7 +76,7 @@ describe('FormularioTarea', () => {
       <FormularioTarea modo="editar" proyectoId={1} tarea={tareaHoja} alCerrar={() => {}} />,
     );
 
-    expect(screen.getByLabelText(/Duración \(días\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Duración \(días hábiles\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Fecha de inicio plan/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Porcentaje de avance/i)).toBeInTheDocument();
   });
