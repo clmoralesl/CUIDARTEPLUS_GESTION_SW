@@ -1,6 +1,7 @@
-import { EstadoProyecto, NivelTarea, Prisma, PrismaClient } from '@prisma/client';
+import { EstadoProyecto, NivelTarea, Prisma, PrismaClient, TipoDependencia } from '@prisma/client';
 import {
   CALENDARIO_POR_DEFECTO,
+  calcularCronograma,
   calcularFinPlan,
   calcularInicioPlan,
   consolidarArbol,
@@ -10,6 +11,8 @@ import {
   feriadosChileDesde,
   numerarArbol,
   type DatosConsolidables,
+  type DependenciaCronograma,
+  type TareaCronograma,
 } from '@autofix/core';
 
 const prisma = new PrismaClient();
@@ -303,6 +306,101 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
   }
 }
 
+const DEPENDENCIAS_SEMILLA: {
+  predecesora: string;
+  sucesora: string;
+  tipo: TipoDependencia;
+  desfaseDias: number;
+}[] = [
+  { predecesora: '1.1.1', sucesora: '1.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '1.1.2', sucesora: '1.2.1', tipo: TipoDependencia.SS, desfaseDias: 2 },
+  { predecesora: '1.2.1', sucesora: '1.2.2', tipo: TipoDependencia.SS, desfaseDias: 3 },
+  { predecesora: '1.1.2', sucesora: '1.2.2', tipo: TipoDependencia.FF, desfaseDias: 5 },
+  { predecesora: '1.2.1', sucesora: '2.1.1', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.1.1', sucesora: '2.1.2', tipo: TipoDependencia.FS, desfaseDias: 0 },
+  { predecesora: '2.1.2', sucesora: '2.2.1', tipo: TipoDependencia.SS, desfaseDias: 7 },
+];
+
+async function sembrarDependencias(proyectoId: number): Promise<void> {
+  const conteo = await prisma.dependencia.count({ where: { proyectoId } });
+  if (conteo > 0) return;
+
+  const todas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const mapaPorCodigo = new Map(todas.map((t) => [t.codigo, t]));
+
+  const datos = DEPENDENCIAS_SEMILLA.map((dep) => {
+    const predecesora = mapaPorCodigo.get(dep.predecesora);
+    const sucesora = mapaPorCodigo.get(dep.sucesora);
+    if (!predecesora || !sucesora) {
+      throw new Error(`Tarea no encontrada para dependencia ${dep.predecesora} -> ${dep.sucesora}`);
+    }
+    return {
+      proyectoId,
+      predecesoraId: predecesora.id,
+      sucesoraId: sucesora.id,
+      tipo: dep.tipo,
+      desfaseDias: dep.desfaseDias,
+    };
+  });
+
+  await prisma.dependencia.createMany({
+    data: datos,
+    skipDuplicates: true,
+  });
+
+  const calFila = await prisma.calendario.findUnique({
+    where: { proyectoId },
+    include: { feriados: { select: { fecha: true } } },
+  });
+  const calendario = calFila
+    ? crearCalendarioLaboral({
+        diasLaborables: calFila.diasLaborables,
+        feriados: calFila.feriados.map((f) => dateAFechaIso(f.fecha)),
+      })
+    : CALENDARIO_POR_DEFECTO;
+
+  const proyecto = await prisma.proyecto.findUniqueOrThrow({
+    where: { id: proyectoId },
+    select: { fechaInicio: true },
+  });
+
+  const tareasCronograma: TareaCronograma[] = todas.map((t) => ({
+    id: t.id,
+    codigo: t.codigo,
+    padreId: t.padreId,
+    duracionDias: t.duracionDias,
+    fechaFija: t.fechaFija ? dateAFechaIso(t.fechaFija) : null,
+    inicioReal: t.inicioReal ? dateAFechaIso(t.inicioReal) : null,
+    finReal: t.finReal ? dateAFechaIso(t.finReal) : null,
+  }));
+
+  const dependenciasCronograma: DependenciaCronograma[] = datos.map((d) => ({
+    predecesoraId: d.predecesoraId,
+    sucesoraId: d.sucesoraId,
+    tipo: d.tipo,
+    desfaseDias: d.desfaseDias,
+  }));
+
+  const resultado = calcularCronograma(
+    tareasCronograma,
+    dependenciasCronograma,
+    calendario,
+    dateAFechaIso(proyecto.fechaInicio),
+  );
+
+  const mapaResultado = new Map(resultado.tareas.map((r) => [r.id, r]));
+  for (const t of todas) {
+    if (t.padreId === null || todas.some((h) => h.padreId === t.id)) continue;
+    const calc = mapaResultado.get(t.id);
+    const finPlanEsperado = t.finPlan ? dateAFechaIso(t.finPlan) : null;
+    if (!calc || calc.finTemprano !== finPlanEsperado) {
+      throw new Error(
+        `Inconsistencia en seed: tarea ${t.codigo} tiene finTemprano ${calc?.finTemprano} pero finPlan ${finPlanEsperado}`,
+      );
+    }
+  }
+}
+
 async function sembrar(): Promise<void> {
   let proyectoPrincipalId: number | null = null;
 
@@ -352,6 +450,7 @@ async function sembrar(): Promise<void> {
 
   if (proyectoPrincipalId) {
     await sembrarTareas(proyectoPrincipalId);
+    await sembrarDependencias(proyectoPrincipalId);
   }
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`

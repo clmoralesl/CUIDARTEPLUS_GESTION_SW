@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CalendarioSinDiasHabilesError,
+  anteriorHabil,
   crearCalendarioLaboral,
   diasHabilesEntre,
   esHabil,
@@ -173,6 +174,17 @@ describe('calendario laboral', () => {
     expect(siguienteHabil('2026-11-06', calendarioChile)).toBe('2026-11-06');
     expect(siguienteHabil('2026-11-07', calendarioChile)).toBe('2026-11-09');
     expect(siguienteHabil('2026-12-08', calendarioChile)).toBe('2026-12-09');
+  });
+
+  it('normaliza dia anterior habil', () => {
+    expect(anteriorHabil('2026-11-06', calendarioChile)).toBe('2026-11-06');
+    expect(anteriorHabil('2026-11-07', calendarioChile)).toBe('2026-11-06');
+    expect(anteriorHabil('2026-11-09', calendarioChile)).toBe('2026-11-09');
+    expect(anteriorHabil('2026-12-08', calendarioChile)).toBe('2026-12-07');
+  });
+
+  it('evita cero negativo en diasHabilesEntre con fechas invertidas', () => {
+    expect(Object.is(diasHabilesEntre('2026-11-07', '2026-11-06', calendarioChile), 0)).toBe(true);
   });
 
   it('valida esquemas zod de dias laborables, calendario y feriado', () => {

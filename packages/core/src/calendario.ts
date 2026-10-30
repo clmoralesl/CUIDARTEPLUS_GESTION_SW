@@ -93,6 +93,16 @@ function normalizarAdelante(dia: number, calendario: CalendarioLaboral): number 
   return actual;
 }
 
+function normalizarAtras(dia: number, calendario: CalendarioLaboral): number {
+  const limite = limitePasos(0, calendario);
+  let actual = dia;
+  for (let pasos = 0; !esDiaHabil(actual, calendario); pasos += 1) {
+    if (pasos > limite) throw new CalendarioSinDiasHabilesError();
+    actual -= 1;
+  }
+  return actual;
+}
+
 function avanzar(dia: number, n: number, calendario: CalendarioLaboral): number {
   const paso = n < 0 ? -1 : 1;
   const limite = limitePasos(n, calendario);
@@ -114,6 +124,10 @@ export function esHabil(fechaIso: string, calendario: CalendarioLaboral): boolea
 
 export function siguienteHabil(fechaIso: string, calendario: CalendarioLaboral): string {
   return aFechaIso(normalizarAdelante(aDiaEpoca(fechaIso), calendario));
+}
+
+export function anteriorHabil(fechaIso: string, calendario: CalendarioLaboral): string {
+  return aFechaIso(normalizarAtras(aDiaEpoca(fechaIso), calendario));
 }
 
 export function sumarDiasHabiles(
@@ -141,6 +155,7 @@ export function diasHabilesEntre(
   for (let dia = menor + 1; dia <= mayor; dia += 1) {
     if (esDiaHabil(dia, calendario)) cuenta += 1;
   }
+  if (cuenta === 0) return 0;
   return desde <= hasta ? cuenta : -cuenta;
 }
 
