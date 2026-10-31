@@ -1,4 +1,3 @@
-import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ActualizarCalendario,
@@ -6,6 +5,7 @@ import type {
   CrearFeriado,
   RespuestaCalendario,
 } from '@autofix/core';
+import { mostrarAvisoRecalculo } from '../tareas/aviso-recalculo';
 import { ErrorSolicitud, solicitar } from './cliente-api';
 
 export function useCalendario(proyectoId: number | null) {
@@ -29,15 +29,7 @@ export function useActualizarCalendario(proyectoId: number) {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      const extra =
-        resultado.tareasRecalculadas > 0
-          ? ` Se recalcularon ${resultado.tareasRecalculadas} tareas.`
-          : '';
-      notifications.show({
-        color: 'green',
-        title: 'Calendario actualizado',
-        message: `El calendario fue actualizado exitosamente.${extra}`,
-      });
+      mostrarAvisoRecalculo('Calendario actualizado', resultado.tareasAfectadas);
     },
   });
 }
@@ -54,15 +46,7 @@ export function useCrearFeriado(proyectoId: number) {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      const extra =
-        resultado.tareasRecalculadas > 0
-          ? ` Se recalcularon ${resultado.tareasRecalculadas} tareas.`
-          : '';
-      notifications.show({
-        color: 'green',
-        title: 'Feriado agregado',
-        message: `El feriado fue agregado exitosamente.${extra}`,
-      });
+      mostrarAvisoRecalculo('Feriado agregado', resultado.tareasAfectadas);
     },
   });
 }
@@ -78,15 +62,7 @@ export function useEliminarFeriado(proyectoId: number) {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      const extra =
-        resultado.tareasRecalculadas > 0
-          ? ` Se recalcularon ${resultado.tareasRecalculadas} tareas.`
-          : '';
-      notifications.show({
-        color: 'green',
-        title: 'Feriado eliminado',
-        message: `El feriado fue eliminado exitosamente.${extra}`,
-      });
+      mostrarAvisoRecalculo('Feriado eliminado', resultado.tareasAfectadas);
     },
   });
 }

@@ -49,13 +49,66 @@ Al operar exclusivamente en un entorno local aislado con Docker, no existe un mo
 
 ## 4. Endpoints del módulo de tareas (árbol de trabajo)
 
-| Método   | Ruta                            | Rol     | Código | Descripción                                     | Errores específicos                                                   |
-| -------- | ------------------------------- | ------- | ------ | ----------------------------------------------- | --------------------------------------------------------------------- |
-| `GET`    | `/proyectos/:proyectoId/tareas` | JP y CC | `200`  | Árbol completo de tareas en preorden            | `400` id inválido, `404` proyecto no encontrado                       |
-| `POST`   | `/proyectos/:proyectoId/tareas` | JP      | `201`  | Creación de tarea y reorganización del árbol    | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
-| `PATCH`  | `/tareas/:tareaId`              | JP      | `200`  | Edición parcial de campos editables             | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 CAMPO_CALCULADO`    |
-| `POST`   | `/tareas/:tareaId/mover`        | JP      | `200`  | Reubicación o reordenamiento entre hermanas     | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
-| `DELETE` | `/tareas/:tareaId`              | JP      | `200`  | Eliminación en cascada de tarea y descendientes | `400`, `403`, `404`, `409 PROYECTO_CERRADO`                           |
+| Método   | Ruta                            | Rol     | Código | Descripción                                      | Errores específicos                                                   |
+| -------- | ------------------------------- | ------- | ------ | ------------------------------------------------ | --------------------------------------------------------------------- |
+| `GET`    | `/proyectos/:proyectoId/tareas` | JP y CC | `200`  | Árbol completo de tareas (`ArbolTareas`)         | `400` id inválido, `404` proyecto no encontrado                       |
+| `POST`   | `/proyectos/:proyectoId/tareas` | JP      | `201`  | Creación de tarea (`ResultadoRecalculo`)         | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
+| `PATCH`  | `/tareas/:tareaId`              | JP      | `200`  | Edición parcial de campos (`ResultadoRecalculo`) | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 CAMPO_CALCULADO`    |
+| `POST`   | `/tareas/:tareaId/mover`        | JP      | `200`  | Reubicación o reorden (`ResultadoRecalculo`)     | `400`, `403`, `404`, `409 PROYECTO_CERRADO`, `422 JERARQUIA_INVALIDA` |
+| `DELETE` | `/tareas/:tareaId`              | JP      | `200`  | Eliminación en cascada (`ResultadoRecalculo`)    | `400`, `403`, `404`, `409 PROYECTO_CERRADO`                           |
+
+Todas las mutaciones devuelven un sobre (_envelope_) `ResultadoRecalculo`:
+
+```json
+{
+  "arbol": { "proyectoId": 1, "porcentajeAvanceProyecto": 35.72, "tareas": [...] },
+  "tareasAfectadas": [
+    {
+      "id": 10,
+      "codigo": "2.1.2",
+      "inicioAnterior": "2026-11-24",
+      "inicioNuevo": "2026-11-26",
+      "finAnterior": "2026-12-03",
+      "finNuevo": "2026-12-07"
+    }
+  ]
+}
+```
+
+---
+
+## 5. Endpoints del módulo de dependencias
+
+| Método   | Ruta                                  | Rol     | Código | Descripción                                       | Errores específicos                                                                                                      |
+| -------- | ------------------------------------- | ------- | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/proyectos/:proyectoId/dependencias` | JP y CC | `200`  | Lista de dependencias del proyecto                | `400` id inválido, `404` proyecto no encontrado                                                                          |
+| `POST`   | `/proyectos/:proyectoId/dependencias` | JP      | `201`  | Creación de dependencia y recálculo automático    | `400`, `403`, `404`, `409 REGISTRO_DUPLICADO`, `409 PROYECTO_CERRADO`, `422 DEPENDENCIA_INVALIDA`, `422 CICLO_DETECTADO` |
+| `DELETE` | `/dependencias/:dependenciaId`        | JP      | `200`  | Eliminación de dependencia y recálculo automático | `400`, `403`, `404 REGISTRO_NO_ENCONTRADO`, `409 PROYECTO_CERRADO`                                                       |
+
+### Contrato de Dependencia
+
+```ts
+interface DependenciaTarea {
+  id: number;
+  predecesoraId: number;
+  sucesoraId: number;
+  tipo: 'FS' | 'SS' | 'FF' | 'SF';
+  desfaseDias: number; // Rango: -365 a 365 días hábiles
+}
+```
+
+---
+
+## 6. Endpoints del módulo de calendario laboral
+
+| Método   | Ruta                                                | Rol     | Código | Descripción                                                          |
+| -------- | --------------------------------------------------- | ------- | ------ | -------------------------------------------------------------------- |
+| `GET`    | `/proyectos/:proyectoId/calendario`                 | JP y CC | `200`  | Configuración de días laborables y feriados                          |
+| `PUT`    | `/proyectos/:proyectoId/calendario/dias-laborables` | JP      | `200`  | Actualización de días laborables y recálculo (`RespuestaCalendario`) |
+| `POST`   | `/proyectos/:proyectoId/calendario/feriados`        | JP      | `201`  | Inclusión de feriado y recálculo (`RespuestaCalendario`)             |
+| `DELETE` | `/feriados/:feriadoId`                              | JP      | `200`  | Eliminación de feriado y recálculo (`RespuestaCalendario`)           |
+
+`RespuestaCalendario` devuelve `{ calendario, tareasAfectadas }`, unificando el reporte de reprogramaciones con el resto de la API.
 
 ### Reglas de jerarquía, consolidación y concurrencia
 
@@ -155,6 +208,8 @@ Todas las respuestas con código HTTP 4xx o 5xx (excepto la sonda `/salud`) devu
 | 413    | `CONTENIDO_DEMASIADO_GRANDE` | Contenido demasiado grande | Carga útil mayor al límite del analizador                           |
 | 422    | `JERARQUIA_INVALIDA`         | Operación no permitida     | Incoherencia en relación jerárquica nivel/padre                     |
 | 422    | `CAMPO_CALCULADO`            | Operación no permitida     | Intento de edición de campos calculados en tarea con subtareas      |
+| 422    | `CICLO_DETECTADO`            | Operación no permitida     | La dependencia genera un ciclo en el grafo de planificación         |
+| 422    | `DEPENDENCIA_INVALIDA`       | Operación no permitida     | Tareas no pertenecen al proyecto o alguna posee subtareas           |
 | 500    | `ERROR_INTERNO`              | Error interno              | Excepción interna no controlada                                     |
 | 503    | `BD_NO_DISPONIBLE`           | Servicio no disponible     | Conexión con PostgreSQL no establecida                              |
 | 0      | `SIN_CONEXION`               | Sin conexión               | Cliente web sin conectividad con API                                |

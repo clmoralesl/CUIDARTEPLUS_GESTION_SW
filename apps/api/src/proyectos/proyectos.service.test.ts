@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { BitacoraService } from '../comun/bitacora/bitacora.service';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { PrismaService } from '../prisma/prisma.service';
+import type { RecalculoService } from '../recalculo/recalculo.service';
 import { ProyectosService } from './proyectos.service';
 
 describe('ProyectosService', () => {
@@ -26,8 +27,16 @@ describe('ProyectosService', () => {
       registrarCreacion: vi.fn().mockResolvedValue(undefined),
     } as unknown as BitacoraService;
 
+    const recalculoMock = {
+      ejecutar: vi.fn().mockResolvedValue({
+        arbol: { proyectoId: 1, porcentajeAvanceProyecto: 0, tareas: [] },
+        tareasAfectadas: [],
+      }),
+    } as unknown as RecalculoService;
+
     const prismaMock = {
       $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(prismaMock)),
+      $queryRaw: vi.fn().mockResolvedValue([]),
       proyecto: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
@@ -41,8 +50,8 @@ describe('ProyectosService', () => {
       },
     } as unknown as PrismaService;
 
-    const servicio = new ProyectosService(prismaMock, bitacoraMock);
-    return { servicio, prismaMock, bitacoraMock };
+    const servicio = new ProyectosService(prismaMock, bitacoraMock, recalculoMock);
+    return { servicio, prismaMock, bitacoraMock, recalculoMock };
   }
 
   describe('actualizar', () => {

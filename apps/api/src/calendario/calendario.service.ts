@@ -15,14 +15,14 @@ import { CambioCampo } from '../comun/bitacora/diferencias';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
 import { PrismaService } from '../prisma/prisma.service';
 import { errorProyectoNoEncontrado, obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
-import { ArbolTareasService } from '../tareas/arbol-tareas.service';
+import { RecalculoService } from '../recalculo/recalculo.service';
 import { mapearCalendarioProyecto } from './calendario.mapeo';
 
 @Injectable()
 export class CalendarioService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly arbol: ArbolTareasService,
+    private readonly recalculo: RecalculoService,
     private readonly bitacora: BitacoraService,
   ) {}
 
@@ -68,23 +68,23 @@ export class CalendarioService {
           update: {},
         });
 
-        const dataActualizar: Prisma.CalendarioUpdateInput = {};
-        if (datos.diasLaborables) {
-          dataActualizar.diasLaborables = [...datos.diasLaborables].sort((a, b) => a - b);
+        const data: Prisma.CalendarioUpdateInput = {};
+        if (datos.diasLaborables !== undefined) {
+          data.diasLaborables = [...datos.diasLaborables].sort((a, b) => a - b);
         }
         if (datos.horasPorDia !== undefined) {
-          dataActualizar.horasPorDia = new Prisma.Decimal(datos.horasPorDia);
+          data.horasPorDia = new Prisma.Decimal(datos.horasPorDia);
         }
 
         const despues = await tx.calendario.update({
           where: { proyectoId },
-          data: dataActualizar,
+          data,
         });
 
         const cambios: CambioCampo[] = [];
         if (
-          datos.diasLaborables &&
-          antes.diasLaborables.join(',') !== despues.diasLaborables.join(',')
+          datos.diasLaborables !== undefined &&
+          JSON.stringify(antes.diasLaborables) !== JSON.stringify(despues.diasLaborables)
         ) {
           cambios.push({
             campo: 'diasLaborables',
@@ -116,20 +116,10 @@ export class CalendarioService {
           );
         }
 
-        const { tareasRecalculadas } = await this.arbol.reorganizarConResumen(tx, proyectoId);
-        if (tareasRecalculadas > 0) {
-          await this.bitacora.registrarRecalculo(
-            tx,
-            {
-              proyectoId,
-              entidad: 'Proyecto',
-              entidadId: proyectoId,
-              rol,
-            },
-            { tareasRecalculadas },
-            'Calendario: días laborables u horas por día',
-          );
-        }
+        const resultadoRecalculo = await this.recalculo.ejecutar(proyectoId, tx, {
+          rol,
+          descripcion: 'Calendario: días laborables u horas por día',
+        });
 
         const despuesConFeriados = await tx.calendario.findUniqueOrThrow({
           where: { proyectoId },
@@ -138,7 +128,7 @@ export class CalendarioService {
 
         return {
           calendario: mapearCalendarioProyecto(despuesConFeriados),
-          tareasRecalculadas,
+          tareasAfectadas: resultadoRecalculo.tareasAfectadas,
         };
       },
       { timeout: 15_000 },
@@ -173,7 +163,7 @@ export class CalendarioService {
           throw new ExcepcionApi(
             HttpStatus.CONFLICT,
             'REGISTRO_DUPLICADO',
-            'Ya existe un feriado en esa fecha.',
+            `Ya existe un feriado registrado para la fecha ${formatearFecha(datos.fecha)}.`,
             [{ campo: 'fecha', mensaje: 'Ya existe un feriado en esa fecha.' }],
           );
         }
@@ -200,20 +190,10 @@ export class CalendarioService {
           },
         );
 
-        const { tareasRecalculadas } = await this.arbol.reorganizarConResumen(tx, proyectoId);
-        if (tareasRecalculadas > 0) {
-          await this.bitacora.registrarRecalculo(
-            tx,
-            {
-              proyectoId,
-              entidad: 'Proyecto',
-              entidadId: proyectoId,
-              rol,
-            },
-            { tareasRecalculadas },
-            `Feriado agregado: ${formatearFecha(datos.fecha)}`,
-          );
-        }
+        const resultadoRecalculo = await this.recalculo.ejecutar(proyectoId, tx, {
+          rol,
+          descripcion: `Feriado agregado: ${formatearFecha(datos.fecha)}`,
+        });
 
         const calendarioActualizado = await tx.calendario.findUniqueOrThrow({
           where: { proyectoId },
@@ -222,7 +202,7 @@ export class CalendarioService {
 
         return {
           calendario: mapearCalendarioProyecto(calendarioActualizado),
-          tareasRecalculadas,
+          tareasAfectadas: resultadoRecalculo.tareasAfectadas,
         };
       },
       { timeout: 15_000 },
@@ -232,23 +212,9 @@ export class CalendarioService {
   async eliminarFeriado(feriadoId: number, rol: Rol): Promise<RespuestaCalendario> {
     return this.prisma.$transaction(
       async (tx) => {
-        const feriado = await tx.feriado.findUnique({
-          where: { id: feriadoId },
-          include: { calendario: { select: { proyectoId: true } } },
-        });
-        if (!feriado) {
-          throw new ExcepcionApi(
-            HttpStatus.NOT_FOUND,
-            'REGISTRO_NO_ENCONTRADO',
-            'El feriado no existe.',
-          );
-        }
-        const proyectoId = feriado.calendario.proyectoId;
-
-        await obtenerProyectoAbierto(tx, proyectoId, { bloquear: true });
-
         const feriadoActual = await tx.feriado.findUnique({
           where: { id: feriadoId },
+          include: { calendario: true },
         });
         if (!feriadoActual) {
           throw new ExcepcionApi(
@@ -258,9 +224,26 @@ export class CalendarioService {
           );
         }
 
-        await tx.feriado.delete({ where: { id: feriadoId } });
+        const proyectoId = feriadoActual.calendario.proyectoId;
+        await obtenerProyectoAbierto(tx, proyectoId, { bloquear: true });
+
+        const feriadoBloqueado = await tx.feriado.findUnique({
+          where: { id: feriadoId },
+        });
+        if (!feriadoBloqueado) {
+          throw new ExcepcionApi(
+            HttpStatus.NOT_FOUND,
+            'REGISTRO_NO_ENCONTRADO',
+            'El feriado no existe.',
+          );
+        }
 
         const fechaIso = dateAFechaIso(feriadoActual.fecha);
+
+        await tx.feriado.delete({
+          where: { id: feriadoId },
+        });
+
         await this.bitacora.registrarEliminacion(
           tx,
           {
@@ -275,20 +258,10 @@ export class CalendarioService {
           },
         );
 
-        const { tareasRecalculadas } = await this.arbol.reorganizarConResumen(tx, proyectoId);
-        if (tareasRecalculadas > 0) {
-          await this.bitacora.registrarRecalculo(
-            tx,
-            {
-              proyectoId,
-              entidad: 'Proyecto',
-              entidadId: proyectoId,
-              rol,
-            },
-            { tareasRecalculadas },
-            `Feriado eliminado: ${formatearFecha(fechaIso)}`,
-          );
-        }
+        const resultadoRecalculo = await this.recalculo.ejecutar(proyectoId, tx, {
+          rol,
+          descripcion: `Feriado eliminado: ${formatearFecha(fechaIso)}`,
+        });
 
         const calendarioActualizado = await tx.calendario.findUniqueOrThrow({
           where: { proyectoId },
@@ -297,7 +270,7 @@ export class CalendarioService {
 
         return {
           calendario: mapearCalendarioProyecto(calendarioActualizado),
-          tareasRecalculadas,
+          tareasAfectadas: resultadoRecalculo.tareasAfectadas,
         };
       },
       { timeout: 15_000 },

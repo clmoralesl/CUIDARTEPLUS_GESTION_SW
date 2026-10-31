@@ -3,5 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
-  test: { include: ['src/**/*.test.ts'] },
+  test: {
+    include: ['src/**/*.test.ts'],
+    exclude: ['src/**/*.bd.test.ts', 'node_modules/**'],
+  },
 });

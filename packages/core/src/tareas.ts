@@ -12,7 +12,7 @@ export const NOMBRES_NIVEL: Record<NivelTarea, string> = {
 
 export const CAMPOS_CALCULADOS = [
   'duracionDias',
-  'inicioPlan',
+  'fechaFija',
   'inicioReal',
   'finReal',
   'porcentajeAvance',
@@ -23,7 +23,7 @@ export const CAMPOS_EDITABLES = [
   'descripcion',
   'responsable',
   'duracionDias',
-  'inicioPlan',
+  'fechaFija',
   'inicioReal',
   'finReal',
   'porcentajeAvance',
@@ -39,8 +39,13 @@ export interface TareaArbol {
   descripcion: string | null;
   responsable: string | null;
   duracionDias: number;
+  fechaFija: string | null;
   inicioPlan: string | null;
   finPlan: string | null;
+  inicioTardio: string | null;
+  finTardio: string | null;
+  holguraDias: number | null;
+  esCritica: boolean;
   inicioReal: string | null;
   finReal: string | null;
   porcentajeAvance: number;
@@ -86,7 +91,7 @@ export const esquemaCrearTarea = z
       .min(0, 'La duración no puede ser negativa.')
       .max(3650, 'La duración no puede superar 3650 días hábiles.')
       .default(1),
-    inicioPlan: esquemaFechaIso.nullable().optional(),
+    fechaFija: esquemaFechaIso.nullable().optional(),
     posicion: z
       .number({ error: 'La posición debe ser numérica.' })
       .int('La posición debe ser un número entero.')
@@ -107,7 +112,7 @@ export const esquemaActualizarTarea = z
       .int('La duración debe ser un número entero.')
       .min(0, 'La duración no puede ser negativa.')
       .max(3650, 'La duración no puede superar 3650 días hábiles.'),
-    inicioPlan: esquemaFechaIso.nullable(),
+    fechaFija: esquemaFechaIso.nullable(),
     inicioReal: esquemaFechaIso.nullable(),
     finReal: esquemaFechaIso.nullable(),
     porcentajeAvance: z

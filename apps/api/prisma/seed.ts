@@ -1,18 +1,14 @@
 import { EstadoProyecto, NivelTarea, Prisma, PrismaClient, TipoDependencia } from '@prisma/client';
 import {
   CALENDARIO_POR_DEFECTO,
-  calcularCronograma,
-  calcularFinPlan,
-  calcularInicioPlan,
-  consolidarArbol,
   crearCalendarioLaboral,
   dateAFechaIso,
   fechaIsoADate,
   feriadosChileDesde,
   numerarArbol,
-  type DatosConsolidables,
+  planificarProyecto,
   type DependenciaCronograma,
-  type TareaCronograma,
+  type TareaPlanificacion,
 } from '@autofix/core';
 
 const prisma = new PrismaClient();
@@ -41,17 +37,6 @@ const PROYECTOS_SEMILLA = [
 async function sembrarTareas(proyectoId: number): Promise<void> {
   const conteo = await prisma.tarea.count({ where: { proyectoId } });
   if (conteo > 0) return;
-
-  const calFila = await prisma.calendario.findUnique({
-    where: { proyectoId },
-    include: { feriados: { select: { fecha: true } } },
-  });
-  const calendario = calFila
-    ? crearCalendarioLaboral({
-        diasLaborables: calFila.diasLaborables,
-        feriados: calFila.feriados.map((f) => dateAFechaIso(f.fecha)),
-      })
-    : CALENDARIO_POR_DEFECTO;
 
   const etapa1 = await prisma.tarea.create({
     data: {
@@ -91,8 +76,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Entrevistas con el jefe de taller',
       responsable: 'Jefe de Taller',
       duracionDias: 3,
-      inicioPlan: fechaIsoADate('2026-11-02'),
-      finPlan: null,
       inicioReal: fechaIsoADate('2026-11-02'),
       finReal: fechaIsoADate('2026-11-04'),
       porcentajeAvance: new Prisma.Decimal(100),
@@ -109,8 +92,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Mapeo del flujo de órdenes de trabajo',
       responsable: 'Jefe de Taller',
       duracionDias: 4,
-      inicioPlan: fechaIsoADate('2026-11-05'),
-      finPlan: null,
       inicioReal: fechaIsoADate('2026-11-05'),
       finReal: null,
       porcentajeAvance: new Prisma.Decimal(50),
@@ -141,8 +122,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Modelo de datos de vehículos y órdenes',
       responsable: 'Desarrollador',
       duracionDias: 5,
-      inicioPlan: fechaIsoADate('2026-11-09'),
-      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -157,8 +136,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Prototipo de pantallas de recepción',
       responsable: 'Diseñador UI',
       duracionDias: 4,
-      inicioPlan: fechaIsoADate('2026-11-12'),
-      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -201,8 +178,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Registro de vehículos y clientes',
       responsable: 'Desarrollador',
       duracionDias: 6,
-      inicioPlan: fechaIsoADate('2026-11-16'),
-      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -217,8 +192,6 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Ingreso y seguimiento de órdenes',
       responsable: 'Desarrollador',
       duracionDias: 8,
-      inicioPlan: fechaIsoADate('2026-11-24'),
-      finPlan: null,
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
@@ -247,60 +220,36 @@ async function sembrarTareas(proyectoId: number): Promise<void> {
       nombre: 'Calendario de turnos por mecánico',
       responsable: 'Desarrollador',
       duracionDias: 5,
-      inicioPlan: fechaIsoADate('2026-12-03'),
-      finPlan: null,
+      porcentajeAvance: new Prisma.Decimal(0),
+    },
+  });
+
+  await prisma.tarea.create({
+    data: {
+      proyectoId,
+      padreId: act22.id,
+      nivel: NivelTarea.SUBACTIVIDAD,
+      codigo: '~2.2.2',
+      orden: 2,
+      nombre: 'Configuración de impresoras de órdenes',
+      responsable: 'Técnico de soporte',
+      duracionDias: 2,
+      fechaFija: fechaIsoADate('2026-11-23'),
       porcentajeAvance: new Prisma.Decimal(0),
     },
   });
 
   const todas = await prisma.tarea.findMany({ where: { proyectoId } });
-  const padresConHijas = new Set(
-    todas.map((t) => t.padreId).filter((id): id is number => id !== null),
-  );
   const numeracion = numerarArbol(todas);
-
-  const datosConsolidar: DatosConsolidables[] = todas.map((t) => {
-    const tieneHijas = padresConHijas.has(t.id);
-    const inicioGuardado = t.inicioPlan ? dateAFechaIso(t.inicioPlan) : null;
-    const inicioIso =
-      !tieneHijas && inicioGuardado
-        ? calcularInicioPlan(inicioGuardado, calendario)
-        : inicioGuardado;
-    let finIso = t.finPlan ? dateAFechaIso(t.finPlan) : null;
-    if (!tieneHijas && inicioIso) {
-      finIso = calcularFinPlan(inicioIso, t.duracionDias, calendario);
-    }
-    return {
-      id: t.id,
-      padreId: t.padreId,
-      duracionDias: t.duracionDias,
-      inicioPlan: inicioIso,
-      finPlan: finIso,
-      inicioReal: t.inicioReal ? dateAFechaIso(t.inicioReal) : null,
-      finReal: t.finReal ? dateAFechaIso(t.finReal) : null,
-      porcentajeAvance: Number(t.porcentajeAvance),
-    };
-  });
-
-  const consolidadas = consolidarArbol(datosConsolidar, calendario);
-  const mapaConsolidadas = new Map(consolidadas.map((c) => [c.id, c]));
 
   for (const t of todas) {
     const num = numeracion.get(t.id);
-    const cons = mapaConsolidadas.get(t.id);
-    if (!num || !cons) continue;
-
+    if (!num) continue;
     await prisma.tarea.update({
       where: { id: t.id },
       data: {
         codigo: num.codigo,
         orden: num.orden,
-        duracionDias: cons.duracionDias,
-        inicioPlan: cons.inicioPlan ? fechaIsoADate(cons.inicioPlan) : null,
-        finPlan: cons.finPlan ? fechaIsoADate(cons.finPlan) : null,
-        inicioReal: cons.inicioReal ? fechaIsoADate(cons.inicioReal) : null,
-        finReal: cons.finReal ? fechaIsoADate(cons.finReal) : null,
-        porcentajeAvance: new Prisma.Decimal(cons.porcentajeAvance),
       },
     });
   }
@@ -347,7 +296,9 @@ async function sembrarDependencias(proyectoId: number): Promise<void> {
     data: datos,
     skipDuplicates: true,
   });
+}
 
+async function planificarSemilla(proyectoId: number): Promise<void> {
   const calFila = await prisma.calendario.findUnique({
     where: { proyectoId },
     include: { feriados: { select: { fecha: true } } },
@@ -364,7 +315,10 @@ async function sembrarDependencias(proyectoId: number): Promise<void> {
     select: { fechaInicio: true },
   });
 
-  const tareasCronograma: TareaCronograma[] = todas.map((t) => ({
+  const todas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const deps = await prisma.dependencia.findMany({ where: { proyectoId } });
+
+  const tareasPlan: TareaPlanificacion[] = todas.map((t) => ({
     id: t.id,
     codigo: t.codigo,
     padreId: t.padreId,
@@ -372,32 +326,79 @@ async function sembrarDependencias(proyectoId: number): Promise<void> {
     fechaFija: t.fechaFija ? dateAFechaIso(t.fechaFija) : null,
     inicioReal: t.inicioReal ? dateAFechaIso(t.inicioReal) : null,
     finReal: t.finReal ? dateAFechaIso(t.finReal) : null,
+    porcentajeAvance: Number(t.porcentajeAvance),
   }));
 
-  const dependenciasCronograma: DependenciaCronograma[] = datos.map((d) => ({
+  const dependenciasPlan: DependenciaCronograma[] = deps.map((d) => ({
     predecesoraId: d.predecesoraId,
     sucesoraId: d.sucesoraId,
     tipo: d.tipo,
     desfaseDias: d.desfaseDias,
   }));
 
-  const resultado = calcularCronograma(
-    tareasCronograma,
-    dependenciasCronograma,
+  const plan = planificarProyecto(
+    tareasPlan,
+    dependenciasPlan,
     calendario,
     dateAFechaIso(proyecto.fechaInicio),
   );
 
-  const mapaResultado = new Map(resultado.tareas.map((r) => [r.id, r]));
-  for (const t of todas) {
-    if (t.padreId === null || todas.some((h) => h.padreId === t.id)) continue;
-    const calc = mapaResultado.get(t.id);
-    const finPlanEsperado = t.finPlan ? dateAFechaIso(t.finPlan) : null;
-    if (!calc || calc.finTemprano !== finPlanEsperado) {
-      throw new Error(
-        `Inconsistencia en seed: tarea ${t.codigo} tiene finTemprano ${calc?.finTemprano} pero finPlan ${finPlanEsperado}`,
-      );
-    }
+  for (const calc of plan.tareas) {
+    await prisma.tarea.update({
+      where: { id: calc.id },
+      data: {
+        duracionDias: calc.duracionDias,
+        inicioPlan: fechaIsoADate(calc.inicioPlan),
+        finPlan: fechaIsoADate(calc.finPlan),
+        inicioTardio: fechaIsoADate(calc.inicioTardio),
+        finTardio: fechaIsoADate(calc.finTardio),
+        holguraDias: calc.holguraDias,
+        esCritica: calc.esCritica,
+        inicioReal: calc.inicioReal ? fechaIsoADate(calc.inicioReal) : null,
+        finReal: calc.finReal ? fechaIsoADate(calc.finReal) : null,
+        porcentajeAvance: new Prisma.Decimal(calc.porcentajeAvance),
+      },
+    });
+  }
+
+  if (plan.finProyecto !== '2026-12-10') {
+    throw new Error(
+      `Fin de proyecto inesperado en seed: ${plan.finProyecto} (esperado: 2026-12-10)`,
+    );
+  }
+
+  const tarea122 = plan.tareas.find((t) => t.codigo === '1.2.2');
+  if (!tarea122 || tarea122.holguraDias !== 16) {
+    throw new Error(
+      `Holgura inesperada para 1.2.2 en seed: ${tarea122?.holguraDias} (esperado: 16)`,
+    );
+  }
+
+  const tarea222 = plan.tareas.find((t) => t.codigo === '2.2.2');
+  if (
+    !tarea222 ||
+    tarea222.inicioPlan !== '2026-11-23' ||
+    tarea222.finPlan !== '2026-11-24' ||
+    tarea222.holguraDias !== 11
+  ) {
+    throw new Error(
+      `Fechas u holgura inesperadas para 2.2.2 en seed: ${tarea222?.inicioPlan}..${tarea222?.finPlan}, holgura ${tarea222?.holguraDias} (esperado: 2026-11-23..2026-11-24, holgura 11)`,
+    );
+  }
+
+  const padresConHijas = new Set(
+    plan.tareas.map((t) => t.padreId).filter((id): id is number => id !== null),
+  );
+  const hojasCriticas = plan.tareas
+    .filter((t) => t.esCritica && !padresConHijas.has(t.id))
+    .map((t) => t.codigo)
+    .sort();
+  const hojasCriticasEsperadas = ['1.1.1', '1.1.2', '1.2.1', '2.1.1', '2.1.2', '2.2.1'].sort();
+
+  if (JSON.stringify(hojasCriticas) !== JSON.stringify(hojasCriticasEsperadas)) {
+    throw new Error(
+      `Hojas críticas inesperadas en seed: ${hojasCriticas.join(', ')} (esperadas: ${hojasCriticasEsperadas.join(', ')})`,
+    );
   }
 }
 
@@ -451,6 +452,7 @@ async function sembrar(): Promise<void> {
   if (proyectoPrincipalId) {
     await sembrarTareas(proyectoPrincipalId);
     await sembrarDependencias(proyectoPrincipalId);
+    await planificarSemilla(proyectoPrincipalId);
   }
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`

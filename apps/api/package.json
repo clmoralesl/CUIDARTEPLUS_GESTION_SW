@@ -9,6 +9,7 @@
     "dev": "prisma generate && prisma migrate deploy && pnpm --filter @autofix/core build && tsc -p tsconfig.build.json && concurrently -k -n core,tsc,api -c cyan,yellow,green \"pnpm --filter @autofix/core dev\" \"tsc -w -p tsconfig.build.json --preserveWatchOutput\" \"nodemon dist/main.js\"",
     "start": "node dist/main.js",
     "test": "prisma generate && vitest run --passWithNoTests",
+    "test:bd": "prisma generate && vitest run -c vitest.bd.config.ts",
     "typecheck": "prisma generate && tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

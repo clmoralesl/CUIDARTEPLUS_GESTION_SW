@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ArbolTareasService } from './arbol-tareas.service';
+import { RecalculoModule } from '../recalculo/recalculo.module';
 import { TareasController } from './tareas.controller';
 import { TareasService } from './tareas.service';
 
 @Module({
+  imports: [RecalculoModule],
   controllers: [TareasController],
-  providers: [TareasService, ArbolTareasService],
-  exports: [TareasService, ArbolTareasService],
+  providers: [TareasService],
+  exports: [TareasService],
 })
 export class TareasModule {}

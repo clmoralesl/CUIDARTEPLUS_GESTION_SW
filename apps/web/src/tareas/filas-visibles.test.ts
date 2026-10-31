@@ -14,8 +14,13 @@ describe('filasVisibles', () => {
       descripcion: null,
       responsable: null,
       duracionDias: 10,
+      fechaFija: null,
       inicioPlan: null,
       finPlan: null,
+      inicioTardio: null,
+      finTardio: null,
+      holguraDias: null,
+      esCritica: false,
       inicioReal: null,
       finReal: null,
       porcentajeAvance: 50,
@@ -31,8 +36,13 @@ describe('filasVisibles', () => {
       descripcion: null,
       responsable: null,
       duracionDias: 5,
+      fechaFija: null,
       inicioPlan: null,
       finPlan: null,
+      inicioTardio: null,
+      finTardio: null,
+      holguraDias: null,
+      esCritica: false,
       inicioReal: null,
       finReal: null,
       porcentajeAvance: 50,
@@ -48,8 +58,13 @@ describe('filasVisibles', () => {
       descripcion: null,
       responsable: null,
       duracionDias: 5,
+      fechaFija: null,
       inicioPlan: null,
       finPlan: null,
+      inicioTardio: null,
+      finTardio: null,
+      holguraDias: null,
+      esCritica: false,
       inicioReal: null,
       finReal: null,
       porcentajeAvance: 50,
@@ -65,8 +80,13 @@ describe('filasVisibles', () => {
       descripcion: null,
       responsable: null,
       duracionDias: 5,
+      fechaFija: null,
       inicioPlan: null,
       finPlan: null,
+      inicioTardio: null,
+      finTardio: null,
+      holguraDias: null,
+      esCritica: false,
       inicioReal: null,
       finReal: null,
       porcentajeAvance: 0,
@@ -79,12 +99,12 @@ describe('filasVisibles', () => {
     expect(visibles.map((t) => t.id)).toEqual([1, 11, 111, 2]);
   });
 
-  it('colapsar una etapa oculta todas sus descendientes', () => {
+  it('oculta las descendientes de una tarea colapsada', () => {
     const visibles = filasVisibles(tareas, new Set([1]));
     expect(visibles.map((t) => t.id)).toEqual([1, 2]);
   });
 
-  it('colapsar una actividad oculta sus subactividades pero deja visible la etapa', () => {
+  it('oculta las subactividades si solo la actividad esta colapsada', () => {
     const visibles = filasVisibles(tareas, new Set([11]));
     expect(visibles.map((t) => t.id)).toEqual([1, 11, 2]);
   });

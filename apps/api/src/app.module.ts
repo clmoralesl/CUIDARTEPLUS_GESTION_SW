@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { BitacoraModule } from './comun/bitacora/bitacora.module';
 import { CalendarioModule } from './calendario/calendario.module';
+import { DependenciasModule } from './dependencias/dependencias.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProyectosModule } from './proyectos/proyectos.module';
+import { RecalculoModule } from './recalculo/recalculo.module';
 import { SaludModule } from './salud/salud.module';
 import { TareasModule } from './tareas/tareas.module';
 
@@ -13,8 +15,10 @@ import { TareasModule } from './tareas/tareas.module';
     BitacoraModule,
     SaludModule,
     ProyectosModule,
+    RecalculoModule,
     TareasModule,
     CalendarioModule,
+    DependenciasModule,
   ],
   controllers: [AppController],
 })

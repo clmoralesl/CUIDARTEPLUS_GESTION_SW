@@ -278,7 +278,8 @@ function calcularHaciaAdelante(
       tarea.finReal ?? calcularFinPlan(tarea.inicioReal, tarea.duracionDias, calendario);
     return;
   }
-  let inicio = siguienteHabil(tarea.fechaFija ?? inicioProyecto, calendario);
+  const piso = siguienteHabil(inicioProyecto, calendario);
+  let inicio = tarea.fechaFija ? mayor(piso, siguienteHabil(tarea.fechaFija, calendario)) : piso;
   for (const d of nodo.entrantes) {
     inicio = mayor(
       inicio,

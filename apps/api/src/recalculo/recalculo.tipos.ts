@@ -1,0 +1,27 @@
+import type { Prisma, Proyecto, Tarea } from '@prisma/client';
+import type { CalendarioLaboral, DependenciaCronograma, Rol, TareaAfectada } from '@autofix/core';
+import type { ValorBitacora } from '../comun/bitacora/diferencias';
+
+export interface OrigenRecalculo {
+  rol: Rol;
+  descripcion: string;
+  tareaId?: number;
+}
+
+export interface ContextoRecalculo {
+  tx: Prisma.TransactionClient;
+  proyecto: Proyecto;
+  calendario: CalendarioLaboral;
+  tareas: Tarea[];
+  dependencias: DependenciaCronograma[];
+  tareasAfectadas: TareaAfectada[];
+  detalle: Record<string, ValorBitacora>;
+  huboCambios: boolean;
+}
+
+export interface PasoRecalculo {
+  readonly nombre: string;
+  ejecutar(contexto: ContextoRecalculo): Promise<void>;
+}
+
+export const PASOS_RECALCULO = Symbol('PASOS_RECALCULO');

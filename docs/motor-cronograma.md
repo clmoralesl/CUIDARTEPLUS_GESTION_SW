@@ -59,9 +59,10 @@ Donde:
 
 ### 3.1 Fecha base y fecha fija (D4)
 
-Toda tarea sin predecesoras (o como cota mínima ante adelantos) tiene una fecha base:
-$$\text{base} = \text{siguienteHabil}(\text{fechaFija} \mathbin{??} \text{inicioProyecto}, \text{calendario})$$
-El atributo `fechaFija` opera bajo la semántica _"no comenzar antes de"_ (_Start No Earlier Than_). La tarea puede comenzar después si sus predecesoras la empujan, pero nunca antes de su fecha fija o del inicio del proyecto.
+Toda tarea sin predecesoras (o como cota mínima ante adelantos) tiene una fecha base calculada respecto al inicio del proyecto normalizado:
+$$\text{piso} = \text{siguienteHabil}(\text{inicioProyecto}, \text{calendario})$$
+$$\text{base} = \text{tarea.fechaFija} \mathbin{?} \max(\text{piso}, \text{siguienteHabil}(\text{tarea.fechaFija}, \text{calendario})) : \text{piso}$$
+El atributo `fechaFija` opera bajo la semántica _"no comenzar antes de"_ (_Start No Earlier Than_). La tarea puede comenzar después si sus predecesoras la empujan, pero nunca antes de su fecha fija normalizada ni antes del inicio del proyecto. Si una fecha fija es anterior al inicio del proyecto, el piso del proyecto prevalece (H1).
 
 ### 3.2 Fechas reales registradas (D5)
 
@@ -143,6 +144,7 @@ A continuación se detalla la resolución manual paso a paso del grafo de 7 depe
 | `2.1.1` | Registro de vehículos y clientes       | 6 días   | -          | -                             |
 | `2.1.2` | Ingreso y seguimiento de órdenes       | 8 días   | -          | -                             |
 | `2.2.1` | Calendario de turnos por mecánico      | 5 días   | -          | -                             |
+| `2.2.2` | Configuración de impresoras de órdenes | 2 días   | 2026-11-23 | -                             |
 
 _Nota sobre feriados:_ Durante este período existe el feriado martes 08-12-2026 (Inmaculada Concepción).
 
@@ -205,7 +207,14 @@ _Nota sobre feriados:_ Durante este período existe el feriado martes 08-12-2026
    - Fin temprano: 5 días hábiles contados a partir del jueves 03-12 (jue 03, vie 04, lun 07, [mar 08 feriado], mié 09, jue 10):
      $\text{finTemprano} = \mathbf{2026-12-10}$.
 
-**Fin global del proyecto:** $\max(2026-11-17, 2026-12-03, 2026-12-10) = \mathbf{2026-12-10}$.
+8. **`2.2.2` (duración 2):**
+   - Sin predecesoras. Restricción por fecha fija: $\text{fechaFija} = 2026-11-23$.
+   - Lunes 23-11 es día hábil posterior al inicio del proyecto.
+   - $\text{inicioTemprano} = \mathbf{2026-11-23}$.
+   - Fin temprano: 2 días hábiles (lun 23, mar 24):
+     $\text{finTemprano} = \mathbf{2026-11-24}$.
+
+**Fin global del proyecto:** $\max(2026-11-17, 2026-11-24, 2026-12-03, 2026-12-10) = \mathbf{2026-12-10}$.
 
 ---
 
@@ -213,40 +222,45 @@ _Nota sobre feriados:_ Durante este período existe el feriado martes 08-12-2026
 
 Se fija como meta tardía global: $\text{finGlobal} = 2026-12-10$.
 
-1. **`2.2.1` (duración 5):**
+1. **`2.2.2` (duración 2):**
+   - Sin sucesoras. $\text{finTardio} = 2026-12-10$.
+   - $\text{inicioTardio} = \text{sumar}(2026-12-10, -(2 - 1)) = \mathbf{2026-12-09}$.
+   - $\text{holguraDias} = \text{diasHabilesEntre}(2026-11-24, 2026-12-10) = \mathbf{11}$.
+
+2. **`2.2.1` (duración 5):**
    - Sin sucesoras. $\text{finTardio} = 2026-12-10$.
    - $\text{inicioTardio} = \text{sumar}(2026-12-10, -(5 - 1)) = \mathbf{2026-12-03}$.
 
-2. **`2.1.2` (duración 8):**
+3. **`2.1.2` (duración 8):**
    - Sucesora: `2.2.1` con SS + 7 $\implies$ restricción en inicio tardío:
      $\text{sumar}(\text{inicioTardio}(2.2.1), -7) = \text{sumar}(2026-12-03, -7) = 2026-11-24$.
    - $\text{inicioTardio} = \mathbf{2026-11-24}$.
    - $\text{finTardio} = \text{sumar}(2026-11-24, 8 - 1) = \mathbf{2026-12-03}$.
 
-3. **`2.1.1` (duración 6):**
+4. **`2.1.1` (duración 6):**
    - Sucesora: `2.1.2` con FS + 0 $\implies$ restricción en fin tardío:
      $\text{sumar}(\text{inicioTardio}(2.1.2), -(1 + 0)) = \text{sumar}(2026-11-24, -1) = 2026-11-23$.
    - $\text{finTardio} = \mathbf{2026-11-23}$.
    - $\text{inicioTardio} = \text{sumar}(2026-11-23, -(6 - 1)) = \mathbf{2026-11-16}$.
 
-4. **`1.2.2` (duración 4):**
+5. **`1.2.2` (duración 4):**
    - Sin sucesoras. $\text{finTardio} = 2026-12-10$.
    - $\text{inicioTardio} = \text{sumar}(2026-12-10, -(4 - 1)) = \mathbf{2026-12-04}$.
    - (El viernes 04-12, lunes 07-12, feriado 08-12, miércoles 09-12, jueves 10-12 conforman los 4 días hábiles).
 
-5. **`1.2.1` (duración 5):**
+6. **`1.2.1` (duración 5):**
    - Sucesora 1: `2.1.1` con FS + 0 $\implies \text{finTardio} \le \text{sumar}(2026-11-16, -1) = 2026-11-13$.
    - Sucesora 2: `1.2.2` con SS + 3 $\implies \text{inicioTardio} \le \text{sumar}(2026-12-04, -3) = 2026-12-01 \implies \text{finTardio} \le 2026-12-07$.
    - El mínimo restrictivo impone $\text{finTardio} = \mathbf{2026-11-13}$.
    - $\text{inicioTardio} = \text{sumar}(2026-11-13, -(5 - 1)) = \mathbf{2026-11-09}$.
 
-6. **`1.1.2` (duración 4):**
+7. **`1.1.2` (duración 4):**
    - Sucesora 1: `1.2.1` con SS + 2 $\implies \text{inicioTardio} \le \text{sumar}(2026-11-09, -2) = 2026-11-05 \implies \text{finTardio} \le 2026-11-10$.
    - Sucesora 2: `1.2.2` con FF + 5 $\implies \text{finTardio} \le \text{sumar}(2026-12-10, -5) = 2026-12-02$.
    - El mínimo restrictivo impone $\text{finTardio} = \mathbf{2026-11-10}$.
    - $\text{inicioTardio} = \text{sumar}(2026-11-10, -(4 - 1)) = \mathbf{2026-11-05}$.
 
-7. **`1.1.1` (duración 3):**
+8. **`1.1.1` (duración 3):**
    - Sucesora: `1.1.2` con FS + 0 $\implies \text{finTardio} \le \text{sumar}(2026-11-05, -1) = 2026-11-04$.
    - $\text{finTardio} = \mathbf{2026-11-04}$.
    - $\text{inicioTardio} = \text{sumar}(2026-11-04, -(3 - 1)) = \mathbf{2026-11-02}$.
@@ -264,7 +278,10 @@ Se fija como meta tardía global: $\text{finGlobal} = 2026-12-10$.
 | `2.1.1` | 2026-11-16      | 2026-11-23   | 2026-11-16    | 2026-11-23 | 0              | Sí        |
 | `2.1.2` | 2026-11-24      | 2026-12-03   | 2026-11-24    | 2026-12-03 | 0              | Sí        |
 | `2.2.1` | 2026-12-03      | 2026-12-10   | 2026-12-03    | 2026-12-10 | 0              | Sí        |
+| `2.2.2` | 2026-11-23      | 2026-11-24   | 2026-12-09    | 2026-12-10 | 11             | No        |
 
 - **Fin del proyecto:** `2026-12-10`
 - **Ruta crítica:** `1.1.1 -> 1.1.2 -> 1.2.1 -> 2.1.1 -> 2.1.2 -> 2.2.1`
-- **Tarea no crítica:** `1.2.2` con 16 días hábiles de holgura total (puede postergar su inicio desde el 12-11 hasta el 04-12 sin alterar la fecha final del proyecto).
+- **Tareas no críticas:**
+  - `1.2.2` con 16 días hábiles de holgura total (puede postergar su inicio desde el 12-11 hasta el 04-12 sin alterar la fecha final del proyecto).
+  - `2.2.2` con 11 días hábiles de holgura total (restringida por fecha fija para no comenzar antes del 23-11).

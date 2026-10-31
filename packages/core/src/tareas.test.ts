@@ -19,7 +19,7 @@ describe('tareas esquemas', () => {
       padreId: 10,
       nombre: 'Diseño de modelos',
       duracionDias: 5,
-      inicioPlan: '2026-11-02',
+      fechaFija: '2026-11-02',
       posicion: 2,
     });
     expect(actividadOk.ok).toBe(true);

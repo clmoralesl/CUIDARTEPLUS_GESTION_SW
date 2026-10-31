@@ -1,6 +1,12 @@
-import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ActualizarTarea, ArbolTareas, CrearTarea, MoverTarea } from '@autofix/core';
+import type {
+  ActualizarTarea,
+  ArbolTareas,
+  CrearTarea,
+  MoverTarea,
+  ResultadoRecalculo,
+} from '@autofix/core';
+import { mostrarAvisoRecalculo } from '../tareas/aviso-recalculo';
 import { ErrorSolicitud, solicitar } from './cliente-api';
 
 export function useArbolTareas(proyectoId: number | null) {
@@ -13,79 +19,69 @@ export function useArbolTareas(proyectoId: number | null) {
 
 export function useCrearTarea(proyectoId: number) {
   const queryClient = useQueryClient();
-  return useMutation<ArbolTareas, ErrorSolicitud, CrearTarea>({
+  return useMutation<ResultadoRecalculo, ErrorSolicitud, CrearTarea>({
     mutationFn: (datos) =>
-      solicitar<ArbolTareas>(`/proyectos/${proyectoId}/tareas`, {
+      solicitar<ResultadoRecalculo>(`/proyectos/${proyectoId}/tareas`, {
         method: 'POST',
         body: JSON.stringify(datos),
       }),
-    onSuccess: (arbol) => {
-      queryClient.setQueryData(['tareas', proyectoId], arbol);
+    onSuccess: (resultado) => {
+      queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      notifications.show({
-        color: 'green',
-        title: 'Tarea creada',
-        message: 'La tarea fue creada exitosamente.',
-      });
+      mostrarAvisoRecalculo('Tarea creada', resultado.tareasAfectadas);
     },
   });
 }
 
 export function useActualizarTarea(proyectoId: number) {
   const queryClient = useQueryClient();
-  return useMutation<ArbolTareas, ErrorSolicitud, { tareaId: number; datos: ActualizarTarea }>({
+  return useMutation<
+    ResultadoRecalculo,
+    ErrorSolicitud,
+    { tareaId: number; datos: ActualizarTarea }
+  >({
     mutationFn: ({ tareaId, datos }) =>
-      solicitar<ArbolTareas>(`/tareas/${tareaId}`, {
+      solicitar<ResultadoRecalculo>(`/tareas/${tareaId}`, {
         method: 'PATCH',
         body: JSON.stringify(datos),
       }),
-    onSuccess: (arbol) => {
-      queryClient.setQueryData(['tareas', proyectoId], arbol);
+    onSuccess: (resultado) => {
+      queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      notifications.show({
-        color: 'green',
-        title: 'Tarea actualizada',
-        message: 'La tarea fue actualizada exitosamente.',
-      });
+      mostrarAvisoRecalculo('Tarea actualizada', resultado.tareasAfectadas);
     },
   });
 }
 
 export function useMoverTarea(proyectoId: number) {
   const queryClient = useQueryClient();
-  return useMutation<ArbolTareas, ErrorSolicitud, { tareaId: number; datos: MoverTarea }>({
+  return useMutation<ResultadoRecalculo, ErrorSolicitud, { tareaId: number; datos: MoverTarea }>({
     mutationFn: ({ tareaId, datos }) =>
-      solicitar<ArbolTareas>(`/tareas/${tareaId}/mover`, {
+      solicitar<ResultadoRecalculo>(`/tareas/${tareaId}/mover`, {
         method: 'POST',
         body: JSON.stringify(datos),
       }),
-    onSuccess: (arbol) => {
-      queryClient.setQueryData(['tareas', proyectoId], arbol);
+    onSuccess: (resultado) => {
+      queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      notifications.show({
-        color: 'green',
-        title: 'Tarea movida',
-        message: 'La ubicación de la tarea fue actualizada.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['dependencias', proyectoId] });
+      mostrarAvisoRecalculo('Tarea movida', resultado.tareasAfectadas);
     },
   });
 }
 
 export function useEliminarTarea(proyectoId: number) {
   const queryClient = useQueryClient();
-  return useMutation<ArbolTareas, ErrorSolicitud, number>({
+  return useMutation<ResultadoRecalculo, ErrorSolicitud, number>({
     mutationFn: (tareaId) =>
-      solicitar<ArbolTareas>(`/tareas/${tareaId}`, {
+      solicitar<ResultadoRecalculo>(`/tareas/${tareaId}`, {
         method: 'DELETE',
       }),
-    onSuccess: (arbol) => {
-      queryClient.setQueryData(['tareas', proyectoId], arbol);
+    onSuccess: (resultado) => {
+      queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
-      notifications.show({
-        color: 'green',
-        title: 'Tarea eliminada',
-        message: 'La tarea fue eliminada exitosamente.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['dependencias', proyectoId] });
+      mostrarAvisoRecalculo('Tarea eliminada', resultado.tareasAfectadas);
     },
   });
 }

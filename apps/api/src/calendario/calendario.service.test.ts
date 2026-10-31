@@ -3,7 +3,7 @@ import { EstadoProyecto, Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import type { BitacoraService } from '../comun/bitacora/bitacora.service';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { ArbolTareasService } from '../tareas/arbol-tareas.service';
+import type { RecalculoService } from '../recalculo/recalculo.service';
 import { CalendarioService } from './calendario.service';
 
 describe('CalendarioService', () => {
@@ -27,16 +27,19 @@ describe('CalendarioService', () => {
     feriados: [],
   };
 
+  const recalculoMockBase = {
+    ejecutar: vi.fn().mockResolvedValue({
+      arbol: { proyectoId: 1, porcentajeAvanceProyecto: 0, tareas: [] },
+      tareasAfectadas: [],
+    }),
+  } as unknown as RecalculoService;
+
   it('obtener lanza 404 si el proyecto no existe', async () => {
     const prismaMock = {
       proyecto: { findUnique: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
 
-    const servicio = new CalendarioService(
-      prismaMock,
-      {} as ArbolTareasService,
-      {} as BitacoraService,
-    );
+    const servicio = new CalendarioService(prismaMock, recalculoMockBase, {} as BitacoraService);
 
     await expect(servicio.obtener(999)).rejects.toMatchObject({
       status: HttpStatus.NOT_FOUND,
@@ -50,11 +53,7 @@ describe('CalendarioService', () => {
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
 
-    const servicio = new CalendarioService(
-      prismaMock,
-      {} as ArbolTareasService,
-      {} as BitacoraService,
-    );
+    const servicio = new CalendarioService(prismaMock, recalculoMockBase, {} as BitacoraService);
     const resultado = await servicio.obtener(1);
 
     expect(resultado).toEqual({
@@ -75,11 +74,7 @@ describe('CalendarioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new CalendarioService(
-      prismaMock,
-      {} as ArbolTareasService,
-      {} as BitacoraService,
-    );
+    const servicio = new CalendarioService(prismaMock, recalculoMockBase, {} as BitacoraService);
 
     await expect(
       servicio.actualizar(2, { diasLaborables: [1, 2, 3, 4, 5, 6] }, 'JP'),
@@ -94,14 +89,11 @@ describe('CalendarioService', () => {
       $queryRaw: vi.fn().mockResolvedValue([]),
       proyecto: { findUnique: vi.fn().mockResolvedValue(proyectoAbierto) },
       calendario: {
-        upsert: vi.fn().mockResolvedValue({
-          ...filaCalendarioBase,
-          diasLaborables: [1, 2, 3, 4, 5],
-        }),
-        update: vi.fn().mockResolvedValue({
-          ...filaCalendarioBase,
-          diasLaborables: [1, 2, 3, 4, 5],
-        }),
+        upsert: vi.fn().mockResolvedValue(filaCalendarioBase),
+        findUnique: vi.fn().mockResolvedValue(filaCalendarioBase),
+        update: vi
+          .fn()
+          .mockImplementation(({ data }) => Promise.resolve({ ...filaCalendarioBase, ...data })),
         findUniqueOrThrow: vi.fn().mockResolvedValue({
           ...filaCalendarioBase,
           diasLaborables: [1, 2, 3, 4, 5],
@@ -113,33 +105,42 @@ describe('CalendarioService', () => {
     const prismaMock = {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
-
-    const arbolMock = {
-      reorganizarConResumen: vi.fn().mockResolvedValue({ tareasRecalculadas: 0 }),
-    } as unknown as ArbolTareasService;
 
     const bitacoraMock = {
       registrarCambios: vi.fn(),
       registrarRecalculo: vi.fn(),
     } as unknown as BitacoraService;
 
-    const servicio = new CalendarioService(prismaMock, arbolMock, bitacoraMock);
+    const recalculoMock = {
+      ejecutar: vi.fn().mockResolvedValue({
+        arbol: { proyectoId: 1, porcentajeAvanceProyecto: 0, tareas: [] },
+        tareasAfectadas: [],
+      }),
+    } as unknown as RecalculoService;
+
+    const servicio = new CalendarioService(prismaMock, recalculoMock, bitacoraMock);
     const resultado = await servicio.actualizar(1, { diasLaborables: [5, 4, 3, 2, 1] }, 'JP');
 
-    expect(resultado.tareasRecalculadas).toBe(0);
+    expect(resultado.tareasAfectadas).toHaveLength(0);
+    expect(txMock.calendario.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ diasLaborables: [1, 2, 3, 4, 5] }),
+      }),
+    );
     expect(bitacoraMock.registrarCambios).not.toHaveBeenCalled();
-    expect(bitacoraMock.registrarRecalculo).not.toHaveBeenCalled();
+    expect(recalculoMock.ejecutar).toHaveBeenCalledWith(1, txMock, {
+      rol: 'JP',
+      descripcion: 'Calendario: días laborables u horas por día',
+    });
   });
 
-  it('actualizar registra bitacora y recalculo si hay tareas recalculadas', async () => {
+  it('actualizar registra bitacora si hay cambios en diasLaborables', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       proyecto: { findUnique: vi.fn().mockResolvedValue(proyectoAbierto) },
       calendario: {
-        upsert: vi.fn().mockResolvedValue({
-          ...filaCalendarioBase,
-          diasLaborables: [1, 2, 3, 4, 5],
-        }),
+        upsert: vi.fn().mockResolvedValue(filaCalendarioBase),
+        findUnique: vi.fn().mockResolvedValue(filaCalendarioBase),
         update: vi.fn().mockResolvedValue({
           ...filaCalendarioBase,
           diasLaborables: [1, 2, 3, 4, 5, 6],
@@ -156,31 +157,35 @@ describe('CalendarioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const arbolMock = {
-      reorganizarConResumen: vi.fn().mockResolvedValue({ tareasRecalculadas: 3 }),
-    } as unknown as ArbolTareasService;
-
     const bitacoraMock = {
       registrarCambios: vi.fn().mockResolvedValue(undefined),
-      registrarRecalculo: vi.fn().mockResolvedValue(undefined),
     } as unknown as BitacoraService;
 
-    const servicio = new CalendarioService(prismaMock, arbolMock, bitacoraMock);
+    const tareaAfectada = {
+      id: 1,
+      codigo: '1.1',
+      inicioAnterior: '2026-11-02',
+      inicioNuevo: '2026-11-02',
+      finAnterior: '2026-11-06',
+      finNuevo: '2026-11-05',
+    };
+
+    const recalculoMock = {
+      ejecutar: vi.fn().mockResolvedValue({
+        arbol: { proyectoId: 1, porcentajeAvanceProyecto: 0, tareas: [] },
+        tareasAfectadas: [tareaAfectada],
+      }),
+    } as unknown as RecalculoService;
+
+    const servicio = new CalendarioService(prismaMock, recalculoMock, bitacoraMock);
     const resultado = await servicio.actualizar(1, { diasLaborables: [1, 2, 3, 4, 5, 6] }, 'JP');
 
-    expect(resultado.tareasRecalculadas).toBe(3);
+    expect(resultado.tareasAfectadas).toEqual([tareaAfectada]);
     expect(bitacoraMock.registrarCambios).toHaveBeenCalledOnce();
-    expect(bitacoraMock.registrarRecalculo).toHaveBeenCalledWith(
-      txMock,
-      {
-        proyectoId: 1,
-        entidad: 'Proyecto',
-        entidadId: 1,
-        rol: 'JP',
-      },
-      { tareasRecalculadas: 3 },
-      'Calendario: días laborables u horas por día',
-    );
+    expect(recalculoMock.ejecutar).toHaveBeenCalledWith(1, txMock, {
+      rol: 'JP',
+      descripcion: 'Calendario: días laborables u horas por día',
+    });
   });
 
   it('crearFeriado lanza 409 si ya existe un feriado en esa fecha', async () => {
@@ -189,6 +194,7 @@ describe('CalendarioService', () => {
       proyecto: { findUnique: vi.fn().mockResolvedValue(proyectoAbierto) },
       calendario: {
         upsert: vi.fn().mockResolvedValue(filaCalendarioBase),
+        findUnique: vi.fn().mockResolvedValue(filaCalendarioBase),
       },
       feriado: {
         findUnique: vi.fn().mockResolvedValue({
@@ -204,17 +210,14 @@ describe('CalendarioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new CalendarioService(
-      prismaMock,
-      {} as ArbolTareasService,
-      {} as BitacoraService,
-    );
+    const servicio = new CalendarioService(prismaMock, recalculoMockBase, {} as BitacoraService);
 
     await expect(
       servicio.crearFeriado(1, { fecha: '2026-12-08', descripcion: 'Inmaculada Concepción' }, 'JP'),
     ).rejects.toMatchObject({
       status: HttpStatus.CONFLICT,
       codigo: 'REGISTRO_DUPLICADO',
+      detalles: [{ campo: 'fecha', mensaje: 'Ya existe un feriado en esa fecha.' }],
     });
   });
 
@@ -227,11 +230,7 @@ describe('CalendarioService', () => {
       $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
     } as unknown as PrismaService;
 
-    const servicio = new CalendarioService(
-      prismaMock,
-      {} as ArbolTareasService,
-      {} as BitacoraService,
-    );
+    const servicio = new CalendarioService(prismaMock, recalculoMockBase, {} as BitacoraService);
 
     await expect(servicio.eliminarFeriado(999, 'JP')).rejects.toMatchObject({
       status: HttpStatus.NOT_FOUND,

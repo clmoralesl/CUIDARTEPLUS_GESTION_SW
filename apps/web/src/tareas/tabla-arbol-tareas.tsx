@@ -14,6 +14,7 @@ interface TablaArbolTareasProps {
   onBajar: (tarea: TareaArbol) => void;
   onMover: (tarea: TareaArbol) => void;
   onEliminar: (tarea: TareaArbol) => void;
+  onVerDetalle?: (tarea: TareaArbol) => void;
 }
 
 export function TablaArbolTareas({
@@ -27,6 +28,7 @@ export function TablaArbolTareas({
   onBajar,
   onMover,
   onEliminar,
+  onVerDetalle,
 }: TablaArbolTareasProps) {
   const visibles = filasVisibles(tareas, colapsadas);
 
@@ -41,7 +43,7 @@ export function TablaArbolTareas({
   }
 
   return (
-    <Table.ScrollContainer minWidth={1150}>
+    <Table.ScrollContainer minWidth={1260}>
       <Table verticalSpacing="xs" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
@@ -51,11 +53,12 @@ export function TablaArbolTareas({
             <Table.Th style={{ width: 110 }}>Inicio plan</Table.Th>
             <Table.Th style={{ width: 110 }}>Fin plan</Table.Th>
             <Table.Th style={{ width: 130 }}>Duración (días hábiles)</Table.Th>
+            <Table.Th style={{ width: 140 }}>Holgura (días hábiles)</Table.Th>
             <Table.Th style={{ width: 110 }}>Inicio real</Table.Th>
             <Table.Th style={{ width: 110 }}>Fin real</Table.Th>
             <Table.Th style={{ width: 150 }}>Avance</Table.Th>
             <Table.Th style={{ width: 160 }}>Responsable</Table.Th>
-            <Table.Th style={{ width: 170 }}>Acciones</Table.Th>
+            <Table.Th style={{ width: 200 }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -79,6 +82,7 @@ export function TablaArbolTareas({
                 onBajar={onBajar}
                 onMover={onMover}
                 onEliminar={onEliminar}
+                onVerDetalle={onVerDetalle}
               />
             );
           })}
