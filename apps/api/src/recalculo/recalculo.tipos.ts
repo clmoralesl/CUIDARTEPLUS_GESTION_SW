@@ -1,5 +1,11 @@
 import type { Prisma, Proyecto, Tarea } from '@prisma/client';
-import type { CalendarioLaboral, DependenciaCronograma, Rol, TareaAfectada } from '@autofix/core';
+import type {
+  CalendarioLaboral,
+  DependenciaCronograma,
+  ListaHitos,
+  Rol,
+  TareaAfectada,
+} from '@autofix/core';
 import type { ValorBitacora } from '../comun/bitacora/diferencias';
 
 export interface OrigenRecalculo {
@@ -15,6 +21,7 @@ export interface ContextoRecalculo {
   tareas: Tarea[];
   dependencias: DependenciaCronograma[];
   tareasAfectadas: TareaAfectada[];
+  hitos: ListaHitos | null;
   detalle: Record<string, ValorBitacora>;
   huboCambios: boolean;
 }

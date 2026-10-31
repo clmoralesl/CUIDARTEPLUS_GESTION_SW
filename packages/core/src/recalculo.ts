@@ -1,6 +1,7 @@
 import type { CalendarioLaboral } from './calendario';
 import { consolidarArbol, type DatosConsolidables } from './consolidacion';
 import { calcularCronograma, compararCodigos, type DependenciaCronograma } from './cronograma';
+import type { ListaHitos } from './hitos';
 import type { ArbolTareas } from './tareas';
 
 export interface TareaPlanificacion {
@@ -48,6 +49,7 @@ export interface TareaAfectada {
 export interface ResultadoRecalculo {
   arbol: ArbolTareas;
   tareasAfectadas: TareaAfectada[];
+  hitos: ListaHitos;
 }
 
 export function planificarProyecto(

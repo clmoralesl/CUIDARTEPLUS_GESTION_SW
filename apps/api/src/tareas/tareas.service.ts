@@ -19,8 +19,11 @@ import {
 import { BitacoraService } from '../comun/bitacora/bitacora.service';
 import { diferencias } from '../comun/bitacora/diferencias';
 import { ExcepcionApi } from '../comun/errores/excepcion-api';
+import { Reloj } from '../comun/reloj/reloj';
 import { PrismaService } from '../prisma/prisma.service';
 import { errorProyectoNoEncontrado, obtenerProyectoAbierto } from '../proyectos/proyecto-abierto';
+import { cargarCalendarioLaboral } from '../calendario/calendario-laboral';
+import { construirListaHitos } from '../hitos/hitos.mapeo';
 import { RecalculoService } from '../recalculo/recalculo.service';
 import { ArbolTareasService } from './arbol-tareas.service';
 
@@ -135,6 +138,7 @@ export class TareasService {
     private readonly arbol: ArbolTareasService,
     private readonly recalculo: RecalculoService,
     private readonly bitacora: BitacoraService,
+    private readonly reloj: Reloj,
   ) {}
 
   async obtenerArbol(proyectoId: number): Promise<ArbolTareas> {
@@ -353,19 +357,22 @@ export class TareasService {
         const arbolMovido = moverEnArbol(tareasExistentes, tareaId, datos.padreId, datos.posicion);
 
         const nodoMovido = arbolMovido.find((n) => n.id === tareaId);
-        if (!nodoMovido) {
-          return {
-            arbol: await this.arbol.cargar(tx, tarea.proyectoId),
-            tareasAfectadas: [],
-          };
-        }
-
         const noHuboCambio =
-          nodoMovido.padreId === tarea.padreId && nodoMovido.orden === tarea.orden;
-        if (noHuboCambio) {
+          nodoMovido && nodoMovido.padreId === tarea.padreId && nodoMovido.orden === tarea.orden;
+
+        if (!nodoMovido || noHuboCambio) {
+          const hitos = await tx.hito.findMany({ where: { proyectoId: tarea.proyectoId } });
+          const calendario = await cargarCalendarioLaboral(tx, tarea.proyectoId);
           return {
             arbol: await this.arbol.cargar(tx, tarea.proyectoId),
             tareasAfectadas: [],
+            hitos: construirListaHitos(
+              tarea.proyectoId,
+              hitos,
+              new Map(tareasExistentes.map((t) => [t.id, t])),
+              calendario,
+              this.reloj.hoy(),
+            ),
           };
         }
 
@@ -438,6 +445,10 @@ export class TareasService {
         });
         const descendientes = contarDescendientes(tareasExistentes, tareaId);
         const subarbolIds = obtenerIdsSubarbol(tareasExistentes, tareaId);
+        const hitosDesvinculados = await tx.hito.findMany({
+          where: { tareaId: { in: subarbolIds } },
+          select: { id: true, tareaId: true },
+        });
         const dependenciasEliminadas = await tx.dependencia.count({
           where: {
             OR: [{ predecesoraId: { in: subarbolIds } }, { sucesoraId: { in: subarbolIds } }],
@@ -467,6 +478,30 @@ export class TareasService {
             dependenciasEliminadas,
           },
         );
+
+        for (const hito of hitosDesvinculados) {
+          const tareaAsociada = tareasExistentes.find((t) => t.id === hito.tareaId);
+          await this.bitacora.registrarCambios(
+            tx,
+            {
+              proyectoId: tarea.proyectoId,
+              entidad: 'Hito',
+              entidadId: hito.id,
+              rol,
+            },
+            AccionBitacora.ACTUALIZAR,
+            [
+              {
+                campo: 'tareaId',
+                anterior: tareaAsociada
+                  ? { id: tareaAsociada.id, codigo: tareaAsociada.codigo }
+                  : null,
+                nuevo: null,
+              },
+            ],
+            `Tarea eliminada: ${tarea.codigo}`,
+          );
+        }
 
         return resultado;
       },

@@ -54,6 +54,7 @@ export function useActualizarProyecto(id: number) {
     onSuccess: (proyecto) => {
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       queryClient.invalidateQueries({ queryKey: ['tareas', id] });
+      queryClient.invalidateQueries({ queryKey: ['hitos', id] });
       notifications.show({
         color: 'green',
         title: 'Proyecto actualizado',

@@ -12,12 +12,14 @@ El sistema de recálculo desacopla la orquestación transaccional de los cálcul
 flowchart TD
     D["Disparador (API / Servicio)"] --> R["RecalculoService.ejecutar"]
     R --> B["1. Bloqueo pesimista (SELECT ... FOR UPDATE)"]
-    B --> N["2. Renumeración determinista del árbol"]
+    N["2. Renumeración determinista del árbol"]
+    B --> N
     N --> C["3. Carga de contexto (Proyecto, Calendario, Tareas, Dependencias)"]
     C --> P["4. Pipeline de Pasos (PASOS_RECALCULO)"]
     P --> F["PasoFechas (CPM, holguras, criticidad, escritura masiva)"]
-    F --> BIT["5. Registro condicional en Bitácora (RECALCULAR si hubo cambios)"]
-    BIT --> RET["6. Retorno de ResultadoRecalculo (árbol + tareasAfectadas)"]
+    F --> H["PasoHitos (evaluación en memoria de hitos del proyecto)"]
+    H --> BIT["5. Registro condicional en Bitácora (RECALCULAR si hubo cambios)"]
+    BIT --> RET["6. Retorno de ResultadoRecalculo (árbol + tareasAfectadas + hitos)"]
 ```
 
 ### 1.1 Contexto de Ejecución (`ContextoRecalculo`)
@@ -30,6 +32,7 @@ Todos los pasos del pipeline reciben y enriquecen un objeto de contexto único c
 - `tareas`: Arreglo de tareas del proyecto cargadas desde la base de datos (actualizadas por cada paso).
 - `dependencias`: Arreglo de dependencias entre tareas del proyecto.
 - `tareasAfectadas`: Arreglo acumulativo de tareas hoja cuyas fechas planificadas cambiaron.
+- `hitos`: Lista evaluada de hitos del proyecto (`ListaHitos | null`) generada durante el recálculo.
 - `detalle`: Diccionario de metadatos de auditoría para la bitácora (`finProyectoAnterior`, `finProyectoNuevo`, `filasActualizadas`).
 - `huboCambios`: Bandera booleana que se activa si algún paso modificó valores en la base de datos.
 
@@ -48,8 +51,13 @@ Todos los pasos del pipeline reciben y enriquecen un objeto de contexto único c
      - Ejecuta la persistencia masiva en lotes de 1000 filas mediante `UPDATE ... FROM (VALUES ...)` parametrizado (`Prisma.sql` y `Prisma.join`), escribiendo únicamente las filas que cambiaron.
      - Llena `contexto.tareasAfectadas` con las hojas que cambiaron de fecha y ya tenían fecha previa.
      - Marca `contexto.huboCambios = true` si hubo variaciones en fechas, holgura, criticidad o duración.
+   - `PasoHitos` (issue #10):
+     - Lee los hitos del proyecto dentro de la transacción (`tx.hito.findMany`).
+     - Evalúa cada hito en memoria contra las tareas ya recalculadas por `PasoFechas` y el calendario laboral, con la fecha de hoy provista por `Reloj`.
+     - Asigna el resultado ordenado a `contexto.hitos`.
+     - No realiza escrituras en base de datos ni altera `contexto.huboCambios`.
 5. **Auditoría Condicional:** Si `contexto.huboCambios === true`, se registra una única fila en la tabla `bitacora` con acción `RECALCULAR`, entidad `Proyecto`, y un objeto JSON que resume el impacto.
-6. **Retorno:** Devuelve `{ arbol: ArbolTareas, tareasAfectadas: TareaAfectada[] }`.
+6. **Retorno:** Devuelve `{ arbol: ArbolTareas, tareasAfectadas: TareaAfectada[], hitos: ListaHitos }`. La inclusión de `hitos` en la respuesta permite que el cliente actualice el estado de los hitos en la misma petición en que reprograma tareas, cumpliendo el criterio literal de aceptación.
 
 ---
 
@@ -136,6 +144,8 @@ En el diseño transaccional de las operaciones con recálculo existe una particu
 ---
 
 ## 6. Cómo Agregar un Paso Futuro al Pipeline
+
+El issue #10 introdujo `PasoHitos` como el primer paso adicional conectado al pipeline sin alterar la lógica de cálculo de `PasoFechas`, validando en la práctica el principio abierto/cerrado.
 
 Para incorporar futuros pasos derivados (como cálculo de costos en el issue #13, cálculo de carga de trabajo en el #14 o análisis de impacto en el #17):
 

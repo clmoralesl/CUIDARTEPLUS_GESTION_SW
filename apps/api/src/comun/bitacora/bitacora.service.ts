@@ -23,6 +23,7 @@ export class BitacoraService {
     contexto: ContextoBitacora,
     accion: AccionBitacora,
     cambios: readonly CambioCampo[],
+    origen?: string,
   ): Promise<void> {
     if (cambios.length === 0) return;
     await tx.bitacora.createMany({
@@ -35,6 +36,7 @@ export class BitacoraService {
         campo: cambio.campo,
         valorAnterior: aJson(cambio.anterior),
         valorNuevo: aJson(cambio.nuevo),
+        origen,
       })),
     });
   }
