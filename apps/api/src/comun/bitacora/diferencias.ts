@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-export type ValorBitacora = string | number | boolean | null | Record<string, unknown>;
+export type ValorBitacora = string | number | boolean | null | Record<string, unknown> | unknown[];
 
 export interface CambioCampo {
   campo: string;

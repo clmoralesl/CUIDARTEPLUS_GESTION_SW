@@ -5,6 +5,7 @@ import {
   IconArrowsMove,
   IconChevronDown,
   IconChevronRight,
+  IconInfoCircle,
   IconPencil,
   IconPlus,
   IconTrash,
@@ -32,6 +33,7 @@ interface FilaTareaProps {
   onBajar: (tarea: TareaArbol) => void;
   onMover: (tarea: TareaArbol) => void;
   onEliminar: (tarea: TareaArbol) => void;
+  onVerDetalle?: (tarea: TareaArbol) => void;
 }
 
 const colorNivel = (nivel: string) => {
@@ -53,6 +55,7 @@ export function FilaTarea({
   onBajar,
   onMover,
   onEliminar,
+  onVerDetalle,
 }: FilaTareaProps) {
   const sangria = tarea.nivel === 'ETAPA' ? 0 : tarea.nivel === 'ACTIVIDAD' ? 24 : 48;
 
@@ -99,6 +102,8 @@ export function FilaTarea({
           <Text
             size="sm"
             fw={tarea.nivel === 'ETAPA' ? 600 : tarea.nivel === 'ACTIVIDAD' ? 500 : 400}
+            style={{ cursor: onVerDetalle ? 'pointer' : 'default' }}
+            onClick={() => onVerDetalle?.(tarea)}
           >
             {tarea.nombre}
           </Text>
@@ -121,6 +126,21 @@ export function FilaTarea({
       <Table.Td>{renderDatoCalculado(formatearFecha(tarea.finPlan))}</Table.Td>
 
       <Table.Td>{renderDatoCalculado(formatearDuracion(tarea.duracionDias))}</Table.Td>
+
+      <Table.Td>
+        <Group gap={6} wrap="nowrap">
+          <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
+            {tarea.holguraDias !== null && tarea.holguraDias !== undefined
+              ? `${tarea.holguraDias}`
+              : '—'}
+          </Text>
+          {tarea.esCritica && (
+            <Badge color="red" size="xs" variant="filled">
+              Crítica
+            </Badge>
+          )}
+        </Group>
+      </Table.Td>
 
       <Table.Td>{renderDatoCalculado(formatearFecha(tarea.inicioReal))}</Table.Td>
 
@@ -149,6 +169,18 @@ export function FilaTarea({
 
       <Table.Td>
         <Group gap={4} wrap="nowrap">
+          <Tooltip label="Detalle">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              aria-label="Detalle"
+              onClick={() => onVerDetalle?.(tarea)}
+            >
+              <IconInfoCircle size={16} />
+            </ActionIcon>
+          </Tooltip>
+
           {tarea.nivel === 'ETAPA' && (
             <AccionProtegida
               size="sm"

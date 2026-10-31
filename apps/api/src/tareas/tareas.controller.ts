@@ -18,6 +18,7 @@ import {
   type ArbolTareas,
   type CrearTarea,
   type MoverTarea,
+  type ResultadoRecalculo,
   type Rol,
 } from '@autofix/core';
 import { RolActual } from '../comun/roles/rol-actual.decorator';
@@ -44,7 +45,7 @@ export class TareasController {
     @Param('proyectoId', new PipeIdRuta('proyectoId')) proyectoId: number,
     @Body(new PipeValidacionZod(esquemaCrearTarea)) datos: CrearTarea,
     @RolActual() rol: Rol,
-  ): Promise<ArbolTareas> {
+  ): Promise<ResultadoRecalculo> {
     return this.tareas.crear(proyectoId, datos, rol);
   }
 
@@ -54,7 +55,7 @@ export class TareasController {
     @Param('tareaId', new PipeIdRuta('tareaId')) tareaId: number,
     @Body(new PipeValidacionZod(esquemaActualizarTarea)) datos: ActualizarTarea,
     @RolActual() rol: Rol,
-  ): Promise<ArbolTareas> {
+  ): Promise<ResultadoRecalculo> {
     return this.tareas.actualizar(tareaId, datos, rol);
   }
 
@@ -65,7 +66,7 @@ export class TareasController {
     @Param('tareaId', new PipeIdRuta('tareaId')) tareaId: number,
     @Body(new PipeValidacionZod(esquemaMoverTarea)) datos: MoverTarea,
     @RolActual() rol: Rol,
-  ): Promise<ArbolTareas> {
+  ): Promise<ResultadoRecalculo> {
     return this.tareas.mover(tareaId, datos, rol);
   }
 
@@ -74,7 +75,7 @@ export class TareasController {
   eliminar(
     @Param('tareaId', new PipeIdRuta('tareaId')) tareaId: number,
     @RolActual() rol: Rol,
-  ): Promise<ArbolTareas> {
+  ): Promise<ResultadoRecalculo> {
     return this.tareas.eliminar(tareaId, rol);
   }
 }

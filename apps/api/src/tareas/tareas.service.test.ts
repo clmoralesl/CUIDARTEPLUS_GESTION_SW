@@ -3,6 +3,7 @@ import { EstadoProyecto, NivelTarea, Prisma, type Tarea } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import type { BitacoraService } from '../comun/bitacora/bitacora.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { RecalculoService } from '../recalculo/recalculo.service';
 import type { ArbolTareasService } from './arbol-tareas.service';
 import { TareasService } from './tareas.service';
 
@@ -40,6 +41,17 @@ describe('TareasService', () => {
     estado: EstadoProyecto.EN_CURSO,
   };
 
+  const recalculoMock = {
+    ejecutar: vi.fn().mockResolvedValue({
+      arbol: {
+        proyectoId: 1,
+        porcentajeAvanceProyecto: 0,
+        tareas: [],
+      },
+      tareasAfectadas: [],
+    }),
+  } as unknown as RecalculoService;
+
   it('lanza 422 JERARQUIA_INVALIDA si se intenta crear una actividad sin padre o con padre de nivel incorrecto', async () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
@@ -58,7 +70,7 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
     await expect(
       servicio.crear(
@@ -95,7 +107,7 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
     await expect(
       servicio.crear(
@@ -123,7 +135,7 @@ describe('TareasService', () => {
       },
       tarea: {
         findUnique: vi.fn().mockResolvedValue(tareaMock),
-        count: vi.fn().mockResolvedValue(2),
+        count: vi.fn().mockResolvedValue(1),
       },
     } as unknown as Prisma.TransactionClient;
 
@@ -133,9 +145,17 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
-    await expect(servicio.actualizar(10, { duracionDias: 10 }, 'JP')).rejects.toMatchObject({
+    await expect(
+      servicio.actualizar(
+        10,
+        {
+          duracionDias: 10,
+        },
+        'JP',
+      ),
+    ).rejects.toMatchObject({
       status: HttpStatus.UNPROCESSABLE_ENTITY,
       codigo: 'CAMPO_CALCULADO',
     });
@@ -160,9 +180,17 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
-    await expect(servicio.actualizar(10, { finReal: '2026-11-05' }, 'JP')).rejects.toMatchObject({
+    await expect(
+      servicio.actualizar(
+        10,
+        {
+          finReal: '2026-11-06',
+        },
+        'JP',
+      ),
+    ).rejects.toMatchObject({
       status: HttpStatus.BAD_REQUEST,
       codigo: 'VALIDACION_FALLIDA',
     });
@@ -192,21 +220,20 @@ describe('TareasService', () => {
         porcentajeAvanceProyecto: 0,
         tareas: [],
       }),
-      reorganizar: vi.fn(),
     } as unknown as ArbolTareasService;
 
     const bitacoraMock = {
       registrarCambios: vi.fn(),
     } as unknown as BitacoraService;
 
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
     const resultado = await servicio.mover(10, { padreId: null, posicion: 1 }, 'JP');
 
     expect(txMock.tarea.update).not.toHaveBeenCalled();
     expect(bitacoraMock.registrarCambios).not.toHaveBeenCalled();
     expect(arbolMock.cargar).toHaveBeenCalledTimes(1);
-    expect(resultado.proyectoId).toBe(1);
+    expect(resultado.arbol.proyectoId).toBe(1);
   });
 
   it('lanza 422 JERARQUIA_INVALIDA si se intenta mover una etapa bajo una actividad', async () => {
@@ -219,9 +246,9 @@ describe('TareasService', () => {
       tarea: {
         findUnique: vi.fn().mockResolvedValue(tareaMock),
         findFirst: vi.fn().mockResolvedValue({
+          ...tareaMock,
           id: 20,
           nivel: NivelTarea.ACTIVIDAD,
-          proyectoId: 1,
         }),
       },
     } as unknown as Prisma.TransactionClient;
@@ -232,9 +259,9 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
-    await expect(servicio.mover(10, { padreId: 20 }, 'JP')).rejects.toMatchObject({
+    await expect(servicio.mover(10, { padreId: 20, posicion: 1 }, 'JP')).rejects.toMatchObject({
       status: HttpStatus.UNPROCESSABLE_ENTITY,
       codigo: 'JERARQUIA_INVALIDA',
     });
@@ -255,6 +282,9 @@ describe('TareasService', () => {
           return Promise.resolve(proyectoMock);
         }),
       },
+      dependencia: {
+        count: vi.fn().mockResolvedValue(0),
+      },
       tarea: {
         findUnique: vi.fn().mockImplementation(() => {
           ordenEjecucion.push('buscarTarea');
@@ -273,7 +303,7 @@ describe('TareasService', () => {
     } as unknown as PrismaService;
 
     const arbolMock = {
-      reorganizar: vi.fn().mockResolvedValue({
+      cargar: vi.fn().mockResolvedValue({
         proyectoId: 1,
         porcentajeAvanceProyecto: 0,
         tareas: [],
@@ -284,7 +314,7 @@ describe('TareasService', () => {
       registrarEliminacion: vi.fn(),
     } as unknown as BitacoraService;
 
-    const servicio = new TareasService(prismaMock, arbolMock, bitacoraMock);
+    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
 
     await servicio.eliminar(10, 'JP');
 

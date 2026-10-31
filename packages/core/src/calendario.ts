@@ -1,4 +1,5 @@
 import { esquemaFechaIso } from './fechas';
+import type { TareaAfectada } from './recalculo';
 import { tieneMaximoDecimales, z } from './validacion';
 
 export const DIAS_LABORABLES_POR_DEFECTO = [1, 2, 3, 4, 5] as const;
@@ -33,7 +34,7 @@ export interface CalendarioProyecto {
 
 export interface RespuestaCalendario {
   calendario: CalendarioProyecto;
-  tareasRecalculadas: number;
+  tareasAfectadas: TareaAfectada[];
 }
 
 export class CalendarioSinDiasHabilesError extends Error {

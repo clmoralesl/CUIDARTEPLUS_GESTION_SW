@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TareasModule } from '../tareas/tareas.module';
+import { RecalculoModule } from '../recalculo/recalculo.module';
 import { CalendarioController } from './calendario.controller';
 import { CalendarioService } from './calendario.service';
 
 @Module({
-  imports: [TareasModule],
+  imports: [RecalculoModule],
   controllers: [CalendarioController],
   providers: [CalendarioService],
   exports: [CalendarioService],

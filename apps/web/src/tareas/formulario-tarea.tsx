@@ -3,7 +3,6 @@ import { Alert, Button, Group, NumberInput, Stack, Text, Textarea, TextInput } f
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import {
-  calcularFinPlan,
   calendarioLaboralDe,
   esHabil,
   esquemaActualizarTarea,
@@ -35,7 +34,7 @@ interface ValoresFormulario {
   descripcion: string;
   responsable: string;
   duracionDias: number;
-  inicioPlan: string | null;
+  fechaFija: string | null;
   inicioReal: string | null;
   finReal: string | null;
   porcentajeAvance: number;
@@ -73,7 +72,7 @@ export function FormularioTarea({
       descripcion: tarea?.descripcion ?? '',
       responsable: tarea?.responsable ?? '',
       duracionDias: tarea?.duracionDias ?? 1,
-      inicioPlan: tarea?.inicioPlan ?? null,
+      fechaFija: tarea?.fechaFija ?? null,
       inicioReal: tarea?.inicioReal ?? null,
       finReal: tarea?.finReal ?? null,
       porcentajeAvance: tarea?.porcentajeAvance ?? 0,
@@ -81,7 +80,11 @@ export function FormularioTarea({
     validate: (valores) => {
       if (modo === 'crear') {
         const resultado = validar(esquemaCrearTarea, {
-          ...valores,
+          nombre: valores.nombre,
+          descripcion: valores.descripcion,
+          responsable: valores.responsable,
+          duracionDias: valores.duracionDias,
+          fechaFija: valores.fechaFija,
           nivel,
           padreId,
         });
@@ -110,16 +113,11 @@ export function FormularioTarea({
 
   const estaCargando = crearMutacion.isPending || actualizarMutacion.isPending;
 
-  const finPlanCalculado =
-    calendario && form.values.inicioPlan && form.values.duracionDias >= 0
-      ? formatearFecha(
-          calcularFinPlan(form.values.inicioPlan, form.values.duracionDias, calendario),
-        )
-      : '—';
-
   const avisoNoHabil =
-    form.values.inicioPlan && calendario && !esHabil(form.values.inicioPlan, calendario)
-      ? `El ${formatearFecha(form.values.inicioPlan)} no es día hábil; la tarea comenzará el ${formatearFecha(siguienteHabil(form.values.inicioPlan, calendario))}.`
+    form.values.fechaFija && calendario && !esHabil(form.values.fechaFija, calendario)
+      ? `La tarea no comenzará antes del ${formatearFecha(
+          siguienteHabil(form.values.fechaFija, calendario),
+        )}, primer día hábil.`
       : null;
 
   const alEnviar = (valores: ValoresFormulario) => {
@@ -131,7 +129,7 @@ export function FormularioTarea({
         descripcion: valores.descripcion.trim() === '' ? null : valores.descripcion,
         responsable: valores.responsable.trim() === '' ? null : valores.responsable,
         duracionDias: valores.duracionDias,
-        inicioPlan: valores.inicioPlan,
+        fechaFija: valores.fechaFija,
       };
 
       crearMutacion.mutate(cuerpo, {
@@ -154,8 +152,8 @@ export function FormularioTarea({
         if (form.isDirty('duracionDias')) {
           cambios.duracionDias = valores.duracionDias;
         }
-        if (form.isDirty('inicioPlan')) {
-          cambios.inicioPlan = valores.inicioPlan;
+        if (form.isDirty('fechaFija')) {
+          cambios.fechaFija = valores.fechaFija;
         }
         if (form.isDirty('inicioReal')) {
           cambios.inicioReal = valores.inicioReal;
@@ -236,15 +234,15 @@ export function FormularioTarea({
 
               <div>
                 <DateInput
-                  label="Fecha de inicio plan"
+                  label="Fecha fija (no comenzar antes de)"
                   placeholder="DD-MM-AAAA"
                   valueFormat="DD-MM-YYYY"
                   clearable
                   value={
-                    form.values.inicioPlan ? new Date(`${form.values.inicioPlan}T00:00:00`) : null
+                    form.values.fechaFija ? new Date(`${form.values.fechaFija}T00:00:00`) : null
                   }
-                  onChange={(val) => form.setFieldValue('inicioPlan', aFechaString(val))}
-                  error={form.errors.inicioPlan}
+                  onChange={(val) => form.setFieldValue('fechaFija', aFechaString(val))}
+                  error={form.errors.fechaFija}
                 />
                 {avisoNoHabil && (
                   <Text size="xs" c="orange.8" mt={4}>
@@ -252,14 +250,24 @@ export function FormularioTarea({
                   </Text>
                 )}
               </div>
-
-              <TextInput
-                label="Fin plan (calculado en días hábiles)"
-                value={finPlanCalculado}
-                readOnly
-                disabled
-              />
             </Group>
+
+            {modo === 'editar' && (
+              <Group grow align="flex-start">
+                <TextInput
+                  label="Inicio calculado"
+                  value={tarea?.inicioPlan ? formatearFecha(tarea.inicioPlan) : '—'}
+                  readOnly
+                  disabled
+                />
+                <TextInput
+                  label="Fin calculado"
+                  value={tarea?.finPlan ? formatearFecha(tarea.finPlan) : '—'}
+                  readOnly
+                  disabled
+                />
+              </Group>
+            )}
 
             <Group grow align="flex-start">
               <DateInput

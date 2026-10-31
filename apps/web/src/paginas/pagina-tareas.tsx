@@ -28,6 +28,7 @@ import { useArbolTareas, useEliminarTarea, useMoverTarea } from '../api/tareas';
 import { BotonProtegido } from '../componentes/boton-protegido';
 import { AvisoProyectoCerrado } from '../proyectos/aviso-proyecto-cerrado';
 import { useSesion } from '../sesion/proveedor-sesion';
+import { DetalleTarea } from '../tareas/detalle-tarea';
 import { FormularioTarea } from '../tareas/formulario-tarea';
 import { ModalMoverTarea } from '../tareas/modal-mover-tarea';
 import { TablaArbolTareas } from '../tareas/tabla-arbol-tareas';
@@ -43,9 +44,11 @@ export function PaginaTareas() {
   const eliminarMutacion = useEliminarTarea(proyectoActivoId ?? 0);
 
   const [colapsadas, setColapsadas] = useState<Set<number>>(new Set());
+  const [tareaDetalleId, setTareaDetalleId] = useState<number | null>(null);
 
   useEffect(() => {
     setColapsadas(new Set());
+    setTareaDetalleId(null);
   }, [proyectoActivoId]);
 
   const [modalCrear, setModalCrear] = useState<{
@@ -188,6 +191,7 @@ export function PaginaTareas() {
 
   const tareas = arbol?.tareas ?? [];
   const porcentajeAvance = arbol?.porcentajeAvanceProyecto ?? 0;
+  const tareaDetalle = tareas.find((t) => t.id === tareaDetalleId) ?? null;
 
   return (
     <Container size="xl" py="xl">
@@ -269,6 +273,7 @@ export function PaginaTareas() {
               onBajar={onBajar}
               onMover={onMover}
               onEliminar={onEliminar}
+              onVerDetalle={(t) => setTareaDetalleId(t.id)}
             />
           </Card>
         )}
@@ -328,6 +333,15 @@ export function PaginaTareas() {
           />
         )}
       </Modal>
+
+      <DetalleTarea
+        tarea={tareaDetalle}
+        todasLasTareas={tareas}
+        proyectoId={proyectoActivoId}
+        estadoProyecto={proyecto?.estado}
+        abierto={tareaDetalle !== null}
+        alCerrar={() => setTareaDetalleId(null)}
+      />
     </Container>
   );
 }

@@ -17,3 +17,5 @@ export * from './arbol';
 export * from './consolidacion';
 export * from './cronograma';
 export * from './tareas';
+export * from './dependencias';
+export * from './recalculo';

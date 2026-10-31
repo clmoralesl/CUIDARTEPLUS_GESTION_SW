@@ -12,6 +12,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "pnpm -r test",
+    "test:bd": "docker compose exec -e DATABASE_URL=postgresql://autofix:autofix@db:5432/autofix_pruebas api pnpm --filter @autofix/api test:bd",
     "typecheck": "pnpm -r typecheck",
     "db:migrate": "docker compose exec api pnpm --filter @autofix/api db:migrate",
     "db:deploy": "docker compose exec api pnpm --filter @autofix/api db:deploy",

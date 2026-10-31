@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { ArbolTareas } from '@autofix/core';
+import type { ArbolTareas, ResultadoRecalculo } from '@autofix/core';
 import { configurarApp } from '../configurar-app';
 import { TareasController } from './tareas.controller';
 import { TareasService } from './tareas.service';
@@ -24,8 +24,13 @@ describe('Tareas Integración HTTP', () => {
         descripcion: null,
         responsable: 'JP',
         duracionDias: 10,
+        fechaFija: null,
         inicioPlan: '2026-11-02',
         finPlan: '2026-11-11',
+        inicioTardio: null,
+        finTardio: null,
+        holguraDias: null,
+        esCritica: false,
         inicioReal: '2026-11-02',
         finReal: null,
         porcentajeAvance: 25,
@@ -34,12 +39,17 @@ describe('Tareas Integración HTTP', () => {
     ],
   };
 
+  const resultadoRecalculoMock: ResultadoRecalculo = {
+    arbol: arbolMock,
+    tareasAfectadas: [],
+  };
+
   const servicioMock = {
     obtenerArbol: vi.fn().mockResolvedValue(arbolMock),
-    crear: vi.fn().mockResolvedValue(arbolMock),
-    actualizar: vi.fn().mockResolvedValue(arbolMock),
-    mover: vi.fn().mockResolvedValue(arbolMock),
-    eliminar: vi.fn().mockResolvedValue(arbolMock),
+    crear: vi.fn().mockResolvedValue(resultadoRecalculoMock),
+    actualizar: vi.fn().mockResolvedValue(resultadoRecalculoMock),
+    mover: vi.fn().mockResolvedValue(resultadoRecalculoMock),
+    eliminar: vi.fn().mockResolvedValue(resultadoRecalculoMock),
   };
 
   beforeAll(async () => {
@@ -108,7 +118,7 @@ describe('Tareas Integración HTTP', () => {
         nombre: 'Nueva etapa taller',
       });
     expect(res.status).toBe(201);
-    expect(res.body.proyectoId).toBe(1);
+    expect(res.body.arbol.proyectoId).toBe(1);
   });
 
   it('responde 200 en actualizar, mover y eliminar con rol JP', async () => {

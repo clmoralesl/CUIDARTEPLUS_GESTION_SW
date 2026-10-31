@@ -25,7 +25,7 @@ describe('CalendarioController', () => {
 
   const respuestaMock: RespuestaCalendario = {
     calendario: calendarioMock,
-    tareasRecalculadas: 2,
+    tareasAfectadas: [],
   };
 
   const servicioMock = {

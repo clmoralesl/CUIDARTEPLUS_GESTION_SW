@@ -914,3 +914,43 @@ describe('cronograma (CPM)', () => {
     ]);
   });
 });
+
+describe('base del paso hacia adelante', () => {
+  const tareaConFechaFija = (fechaFija: string | null) => ({
+    id: 1,
+    codigo: '1',
+    padreId: null,
+    duracionDias: 2,
+    fechaFija,
+    inicioReal: null,
+    finReal: null,
+  });
+
+  it('una fecha fija anterior al inicio del proyecto no adelanta la tarea', () => {
+    const r = calcularCronograma(
+      [tareaConFechaFija('2026-10-26')],
+      [],
+      CALENDARIO_POR_DEFECTO,
+      '2026-11-02',
+    );
+    expect(r.tareas[0]?.inicioTemprano).toBe('2026-11-02');
+  });
+  it('una fecha fija posterior se respeta y se normaliza al siguiente día hábil', () => {
+    const r = calcularCronograma(
+      [tareaConFechaFija('2026-11-07')],
+      [],
+      CALENDARIO_POR_DEFECTO,
+      '2026-11-02',
+    );
+    expect(r.tareas[0]?.inicioTemprano).toBe('2026-11-09');
+  });
+  it('un inicio de proyecto en sábado se normaliza', () => {
+    const r = calcularCronograma(
+      [tareaConFechaFija(null)],
+      [],
+      CALENDARIO_POR_DEFECTO,
+      '2026-10-31',
+    );
+    expect(r.tareas[0]?.inicioTemprano).toBe('2026-11-02');
+  });
+});

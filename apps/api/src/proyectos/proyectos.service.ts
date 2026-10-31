@@ -8,6 +8,7 @@ import {
   fechasEnOrden,
   fechaIsoADate,
   feriadosChileDesde,
+  formatearFecha,
   MENSAJE_FECHAS,
   NOMBRES_ESTADO_PROYECTO,
   puedeTransicionar,
@@ -26,6 +27,7 @@ import {
   obtenerProyectoAbierto,
 } from './proyecto-abierto';
 import { mapearProyectoDetalle, mapearProyectoResumen } from './proyectos.mapeo';
+import { RecalculoService } from '../recalculo/recalculo.service';
 
 const CAMPOS_AUDITADOS = [
   'nombre',
@@ -41,6 +43,7 @@ export class ProyectosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bitacora: BitacoraService,
+    private readonly recalculo: RecalculoService,
   ) {}
 
   async listar(): Promise<ProyectoResumen[]> {
@@ -131,7 +134,7 @@ export class ProyectosService {
 
   async actualizar(id: number, datos: ActualizarProyecto, rol: Rol): Promise<ProyectoDetalle> {
     return this.prisma.$transaction(async (tx) => {
-      const antes = await obtenerProyectoAbierto(tx, id);
+      const antes = await obtenerProyectoAbierto(tx, id, { bloquear: true });
 
       const fechaInicio = datos.fechaInicio ?? dateAFechaIso(antes.fechaInicio);
       const fechaFin =
@@ -177,6 +180,18 @@ export class ProyectosService {
         AccionBitacora.ACTUALIZAR,
         cambios,
       );
+
+      if (
+        datos.fechaInicio !== undefined &&
+        dateAFechaIso(antes.fechaInicio) !== dateAFechaIso(despues.fechaInicio)
+      ) {
+        const antesFmt = formatearFecha(dateAFechaIso(antes.fechaInicio));
+        const despuesFmt = formatearFecha(dateAFechaIso(despues.fechaInicio));
+        await this.recalculo.ejecutar(id, tx, {
+          rol,
+          descripcion: `Cambio de fecha de inicio del proyecto: ${antesFmt} → ${despuesFmt}`,
+        });
+      }
 
       return this.calcularDetalle(tx, despues);
     });
