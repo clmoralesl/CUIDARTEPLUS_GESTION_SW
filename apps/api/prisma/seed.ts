@@ -3,10 +3,14 @@ import {
   CALENDARIO_POR_DEFECTO,
   crearCalendarioLaboral,
   dateAFechaIso,
+  evaluarHito,
   fechaIsoADate,
   feriadosChileDesde,
+  hoyEnZona,
   numerarArbol,
   planificarProyecto,
+  sumarDiasHabiles,
+  type CalendarioLaboral,
   type DependenciaCronograma,
   type TareaPlanificacion,
 } from '@autofix/core';
@@ -298,17 +302,21 @@ async function sembrarDependencias(proyectoId: number): Promise<void> {
   });
 }
 
-async function planificarSemilla(proyectoId: number): Promise<void> {
+async function cargarCalendarioSemilla(proyectoId: number): Promise<CalendarioLaboral> {
   const calFila = await prisma.calendario.findUnique({
     where: { proyectoId },
     include: { feriados: { select: { fecha: true } } },
   });
-  const calendario = calFila
+  return calFila
     ? crearCalendarioLaboral({
         diasLaborables: calFila.diasLaborables,
         feriados: calFila.feriados.map((f) => dateAFechaIso(f.fecha)),
       })
     : CALENDARIO_POR_DEFECTO;
+}
+
+async function planificarSemilla(proyectoId: number): Promise<void> {
+  const calendario = await cargarCalendarioSemilla(proyectoId);
 
   const proyecto = await prisma.proyecto.findUniqueOrThrow({
     where: { id: proyectoId },
@@ -402,6 +410,126 @@ async function planificarSemilla(proyectoId: number): Promise<void> {
   }
 }
 
+async function sembrarHitos(proyectoId: number): Promise<void> {
+  const conteo = await prisma.hito.count({ where: { proyectoId } });
+  if (conteo > 0) return;
+
+  const calendario = await cargarCalendarioSemilla(proyectoId);
+  const tareas = await prisma.tarea.findMany({ where: { proyectoId } });
+  const porCodigo = new Map(tareas.map((t) => [t.codigo, t]));
+
+  const buscarTarea = (codigo: string) => {
+    const t = porCodigo.get(codigo);
+    if (!t) throw new Error(`Tarea ${codigo} no encontrada para hito en seed.`);
+    return t;
+  };
+
+  const hoy = hoyEnZona();
+  const fechaRevision = sumarDiasHabiles(hoy, 3, calendario);
+
+  const definicionHitos = [
+    {
+      nombre: 'Acta de inicio aprobada',
+      tareaId: null,
+      fechaObjetivo: fechaIsoADate('2026-10-30'),
+      fechaCumplimiento: fechaIsoADate('2026-10-29'),
+      criterio: 'Acta firmada por el dueño del taller',
+      responsable: 'Jefe de Proyecto',
+      invariante: 'CUMPLIDO',
+    },
+    {
+      nombre: 'Procesos del taller levantados',
+      tareaId: buscarTarea('1.1').id,
+      fechaObjetivo: fechaIsoADate('2026-11-06'),
+      fechaCumplimiento: null,
+      criterio: 'Informe de procesos validado por el jefe de taller',
+      responsable: 'Jefe de Taller',
+      invariante: 'ATRASADO',
+    },
+    {
+      nombre: 'Diseño de la solución aprobado',
+      tareaId: buscarTarea('1.2').id,
+      fechaObjetivo: fechaIsoADate('2026-11-20'),
+      fechaCumplimiento: null,
+      criterio: 'Modelo de datos y prototipo aprobados',
+      responsable: 'Jefe de Proyecto',
+      invariante: null,
+    },
+    {
+      nombre: 'Módulo de órdenes operativo',
+      tareaId: buscarTarea('2.1').id,
+      fechaObjetivo: fechaIsoADate('2026-12-04'),
+      fechaCumplimiento: null,
+      criterio: 'Registro y seguimiento de órdenes probado en el taller',
+      responsable: 'Desarrollador Senior',
+      invariante: null,
+    },
+    {
+      nombre: 'Sistema en marcha blanca',
+      tareaId: buscarTarea('2').id,
+      fechaObjetivo: fechaIsoADate('2027-03-31'),
+      fechaCumplimiento: null,
+      criterio: 'Uso en paralelo durante dos semanas sin incidentes graves',
+      responsable: 'Jefe de Proyecto',
+      invariante: 'PENDIENTE',
+    },
+    {
+      nombre: 'Revisión con el dueño del taller',
+      tareaId: null,
+      fechaObjetivo: fechaIsoADate(fechaRevision),
+      fechaCumplimiento: null,
+      criterio: 'Reunión de avance con acta',
+      responsable: 'Jefe de Proyecto',
+      invariante: 'EN_RIESGO',
+    },
+  ];
+
+  const creados: Array<{ nombre: string; estado: string }> = [];
+
+  for (const def of definicionHitos) {
+    const hito = await prisma.hito.create({
+      data: {
+        proyectoId,
+        nombre: def.nombre,
+        tareaId: def.tareaId,
+        fechaObjetivo: def.fechaObjetivo,
+        fechaCumplimiento: def.fechaCumplimiento,
+        criterio: def.criterio,
+        responsable: def.responsable,
+      },
+    });
+
+    const tarea = def.tareaId ? tareas.find((t) => t.id === def.tareaId) : null;
+    const evaluacion = evaluarHito(
+      {
+        fechaObjetivo: dateAFechaIso(hito.fechaObjetivo),
+        fechaCumplimiento: hito.fechaCumplimiento ? dateAFechaIso(hito.fechaCumplimiento) : null,
+        tarea: tarea
+          ? {
+              finPlan: tarea.finPlan ? dateAFechaIso(tarea.finPlan) : null,
+              porcentajeAvance: Number(tarea.porcentajeAvance),
+            }
+          : null,
+      },
+      calendario,
+      hoy,
+    );
+
+    if (def.invariante && evaluacion.estado !== def.invariante) {
+      throw new Error(
+        `Estado inesperado para hito "${def.nombre}": ${evaluacion.estado} (esperado: ${def.invariante})`,
+      );
+    }
+
+    creados.push({ nombre: def.nombre, estado: evaluacion.estado });
+  }
+
+  console.log('Hitos sembrados:');
+  for (const c of creados) {
+    console.log(`- ${c.nombre}: ${c.estado}`);
+  }
+}
+
 async function sembrar(): Promise<void> {
   let proyectoPrincipalId: number | null = null;
 
@@ -453,6 +581,7 @@ async function sembrar(): Promise<void> {
     await sembrarTareas(proyectoPrincipalId);
     await sembrarDependencias(proyectoPrincipalId);
     await planificarSemilla(proyectoPrincipalId);
+    await sembrarHitos(proyectoPrincipalId);
   }
 
   const tablas = await prisma.$queryRaw<{ total: bigint }[]>`

@@ -8,6 +8,7 @@ import {
   esquemaFechaIso,
   fechaIsoADate,
   fechaLocalIso,
+  hoyEnZona,
   sumarDiasCorridos,
 } from './fechas';
 import { validar } from './validacion';
@@ -56,5 +57,12 @@ describe('fechas', () => {
     expect(diasCorridosEntre('2026-11-02', '2026-11-05')).toBe(3);
     expect(diasCorridosEntre('2026-11-02', '2026-11-02')).toBe(0);
     expect(diasCorridosEntre('2026-11-05', '2026-11-02')).toBe(-3);
+  });
+
+  it('obtiene fecha actual en zona horaria especificada', () => {
+    expect(hoyEnZona(new Date('2026-10-31T02:59:00Z'))).toBe('2026-10-30');
+    expect(hoyEnZona(new Date('2026-10-31T03:00:00Z'))).toBe('2026-10-31');
+    expect(hoyEnZona(new Date('2026-07-01T03:59:00Z'))).toBe('2026-06-30');
+    expect(hoyEnZona(new Date('2026-07-01T04:00:00Z'))).toBe('2026-07-01');
   });
 });

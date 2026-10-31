@@ -26,6 +26,15 @@ export function fechaLocalIso(fecha: Date = new Date()): string {
   return `${fecha.getFullYear()}-${mes}-${dia}`;
 }
 
+export function hoyEnZona(instante: Date = new Date(), zona = 'America/Santiago'): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: zona,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instante);
+}
+
 const MILISEGUNDOS_DIA = 86_400_000;
 
 export function sumarDiasCorridos(fechaIso: string, dias: number): string {

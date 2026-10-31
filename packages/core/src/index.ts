@@ -18,4 +18,5 @@ export * from './consolidacion';
 export * from './cronograma';
 export * from './tareas';
 export * from './dependencias';
+export * from './hitos';
 export * from './recalculo';

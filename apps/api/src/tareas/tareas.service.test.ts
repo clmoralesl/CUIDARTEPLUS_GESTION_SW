@@ -2,12 +2,14 @@ import { HttpStatus } from '@nestjs/common';
 import { EstadoProyecto, NivelTarea, Prisma, type Tarea } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import type { BitacoraService } from '../comun/bitacora/bitacora.service';
+import type { Reloj } from '../comun/reloj/reloj';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RecalculoService } from '../recalculo/recalculo.service';
 import type { ArbolTareasService } from './arbol-tareas.service';
 import { TareasService } from './tareas.service';
 
 describe('TareasService', () => {
+  const relojMock = { hoy: () => '2026-10-30' } as unknown as Reloj;
   const tareaMock: Tarea = {
     id: 10,
     proyectoId: 1,
@@ -56,6 +58,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -70,7 +73,13 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await expect(
       servicio.crear(
@@ -93,6 +102,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -107,7 +117,13 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await expect(
       servicio.crear(
@@ -130,6 +146,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -145,7 +162,13 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await expect(
       servicio.actualizar(
@@ -165,6 +188,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -180,7 +204,13 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await expect(
       servicio.actualizar(
@@ -200,6 +230,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -226,7 +257,13 @@ describe('TareasService', () => {
       registrarCambios: vi.fn(),
     } as unknown as BitacoraService;
 
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     const resultado = await servicio.mover(10, { padreId: null, posicion: 1 }, 'JP');
 
@@ -240,6 +277,7 @@ describe('TareasService', () => {
     const txMock = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockResolvedValue(proyectoMock),
       },
@@ -259,7 +297,13 @@ describe('TareasService', () => {
 
     const arbolMock = {} as ArbolTareasService;
     const bitacoraMock = {} as BitacoraService;
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await expect(servicio.mover(10, { padreId: 20, posicion: 1 }, 'JP')).rejects.toMatchObject({
       status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -276,6 +320,7 @@ describe('TareasService', () => {
         return Promise.resolve([]);
       }),
       calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
       proyecto: {
         findUnique: vi.fn().mockImplementation(() => {
           ordenEjecucion.push('verificarProyecto');
@@ -284,6 +329,9 @@ describe('TareasService', () => {
       },
       dependencia: {
         count: vi.fn().mockResolvedValue(0),
+      },
+      hito: {
+        findMany: vi.fn().mockResolvedValue([]),
       },
       tarea: {
         findUnique: vi.fn().mockImplementation(() => {
@@ -314,7 +362,13 @@ describe('TareasService', () => {
       registrarEliminacion: vi.fn(),
     } as unknown as BitacoraService;
 
-    const servicio = new TareasService(prismaMock, arbolMock, recalculoMock, bitacoraMock);
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
 
     await servicio.eliminar(10, 'JP');
 
@@ -325,5 +379,49 @@ describe('TareasService', () => {
       'buscarTarea',
       'borrarTarea',
     ]);
+  });
+
+  it('mover sin cambios evalua hitos usando la fecha provista por Reloj', async () => {
+    const txMock = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      calendario: { findUnique: vi.fn().mockResolvedValue(null) },
+      hito: { findMany: vi.fn().mockResolvedValue([]) },
+      proyecto: {
+        findUnique: vi.fn().mockResolvedValue(proyectoMock),
+      },
+      tarea: {
+        findUnique: vi.fn().mockResolvedValue(tareaMock),
+        findMany: vi.fn().mockResolvedValue([tareaMock]),
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    const prismaMock = {
+      $transaction: vi.fn().mockImplementation((cb) => cb(txMock)),
+    } as unknown as PrismaService;
+
+    const arbolMock = {
+      cargar: vi.fn().mockResolvedValue({
+        proyectoId: 1,
+        porcentajeAvanceProyecto: 0,
+        tareas: [tareaMock],
+      }),
+    } as unknown as ArbolTareasService;
+
+    const bitacoraMock = {
+      registrarCambios: vi.fn(),
+    } as unknown as BitacoraService;
+
+    const servicio = new TareasService(
+      prismaMock,
+      arbolMock,
+      recalculoMock,
+      bitacoraMock,
+      relojMock,
+    );
+
+    const resultado = await servicio.mover(10, { padreId: null, posicion: 1 }, 'JP');
+
+    expect(resultado.tareasAfectadas).toEqual([]);
+    expect(resultado.hitos.fechaCalculo).toBe('2026-10-30');
   });
 });

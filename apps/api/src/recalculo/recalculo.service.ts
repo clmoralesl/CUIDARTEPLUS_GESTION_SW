@@ -55,6 +55,7 @@ export class RecalculoService {
         desfaseDias: d.desfaseDias,
       })),
       tareasAfectadas: [],
+      hitos: null,
       detalle: {},
       huboCambios: false,
     };
@@ -72,6 +73,7 @@ export class RecalculoService {
     return {
       arbol: await this.arbol.cargar(tx, proyectoId),
       tareasAfectadas: contexto.tareasAfectadas,
+      hitos: contexto.hitos ?? { proyectoId, fechaCalculo: '', hitos: [] },
     };
   }
 }

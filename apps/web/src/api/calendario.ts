@@ -28,6 +28,7 @@ export function useActualizarCalendario(proyectoId: number) {
     onSuccess: (resultado) => {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
+      queryClient.invalidateQueries({ queryKey: ['hitos', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       mostrarAvisoRecalculo('Calendario actualizado', resultado.tareasAfectadas);
     },
@@ -45,6 +46,7 @@ export function useCrearFeriado(proyectoId: number) {
     onSuccess: (resultado) => {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
+      queryClient.invalidateQueries({ queryKey: ['hitos', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       mostrarAvisoRecalculo('Feriado agregado', resultado.tareasAfectadas);
     },
@@ -61,6 +63,7 @@ export function useEliminarFeriado(proyectoId: number) {
     onSuccess: (resultado) => {
       queryClient.setQueryData(['calendario', proyectoId], resultado.calendario);
       queryClient.invalidateQueries({ queryKey: ['tareas', proyectoId] });
+      queryClient.invalidateQueries({ queryKey: ['hitos', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       mostrarAvisoRecalculo('Feriado eliminado', resultado.tareasAfectadas);
     },

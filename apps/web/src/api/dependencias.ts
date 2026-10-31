@@ -1,6 +1,12 @@
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CrearDependencia, DependenciaTarea, ResultadoRecalculo } from '@autofix/core';
+import type {
+  CrearDependencia,
+  DependenciaTarea,
+  ListaHitos,
+  ResultadoRecalculo,
+} from '@autofix/core';
+import { mostrarAvisosHitos } from '../hitos/aviso-hitos';
 import { mostrarAvisoRecalculo } from '../tareas/aviso-recalculo';
 import { ErrorSolicitud, solicitar } from './cliente-api';
 
@@ -22,10 +28,13 @@ export function useCrearDependencia(proyectoId: number) {
         body: JSON.stringify(datos),
       }),
     onSuccess: (resultado) => {
+      const hitosPrevios = queryClient.getQueryData<ListaHitos>(['hitos', proyectoId]);
       queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
+      queryClient.setQueryData(['hitos', proyectoId], resultado.hitos);
       queryClient.invalidateQueries({ queryKey: ['dependencias', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       mostrarAvisoRecalculo('Dependencia agregada', resultado.tareasAfectadas);
+      mostrarAvisosHitos(hitosPrevios, resultado.hitos);
     },
   });
 }
@@ -38,10 +47,13 @@ export function useEliminarDependencia(proyectoId: number) {
         method: 'DELETE',
       }),
     onSuccess: (resultado) => {
+      const hitosPrevios = queryClient.getQueryData<ListaHitos>(['hitos', proyectoId]);
       queryClient.setQueryData(['tareas', proyectoId], resultado.arbol);
+      queryClient.setQueryData(['hitos', proyectoId], resultado.hitos);
       queryClient.invalidateQueries({ queryKey: ['dependencias', proyectoId] });
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
       mostrarAvisoRecalculo('Dependencia eliminada', resultado.tareasAfectadas);
+      mostrarAvisosHitos(hitosPrevios, resultado.hitos);
     },
     onError: (error) => {
       notifications.show({
